@@ -3,14 +3,160 @@ import random
 
 # テトリスのゲームクラス
 class Tetris:
+    next_count = -1
+    val = [0,1,2,3,4,5,6]
+    dir = 0
+
     def __init__(self):
         pygame.init()
+        self.block = [
+            #I
+            [[[0,0,0,0],
+            [1,1,1,1],
+            [0,0,0,0],
+            [0,0,0,0]],
+
+            [[0,0,1,0],
+            [0,0,1,0],
+            [0,0,1,0],
+            [0,0,1,0]],
+
+            [[0,0,0,0],
+            [0,0,0,0],
+            [1,1,1,1],
+            [0,0,0,0]],
+
+            [[0,1,0,0],
+            [0,1,0,0],
+            [0,1,0,0],
+            [0,1,0,0]]],
+            #O
+            [[[0,0,0,0],
+            [0,2,2,0],
+            [0,2,2,0],
+            [0,0,0,0]],
+
+            [[0,0,0,0],
+            [0,2,2,0],
+            [0,2,2,0],
+            [0,0,0,0]],
+
+            [[0,0,0,0],
+            [0,2,2,0],
+            [0,2,2,0],
+            [0,0,0,0]],
+
+            [[0,0,0,0],
+            [0,2,2,0],
+            [0,2,2,0],
+            [0,0,0,0]]],
+            #S
+            [[[0,0,0,0],
+            [0,3,3,0],
+            [3,3,0,0],
+            [0,0,0,0]],
+
+            [[0,0,0,0],
+            [0,3,0,0],
+            [0,3,3,0],
+            [0,0,3,0]],
+
+            [[0,0,0,0],
+            [0,0,0,0],
+            [0,3,3,0],
+            [3,3,0,0]],
+
+            [[0,0,0,0],
+            [3,0,0,0],
+            [3,3,0,0],
+            [0,3,0,0]]],
+            #Z
+            [[[0,0,0,0],
+            [4,4,0,0],
+            [0,4,4,0],
+            [0,0,0,0]],
+
+            [[0,0,0,0],
+            [0,0,4,0],
+            [0,4,4,0],
+            [0,4,0,0]],
+
+            [[0,0,0,0],
+            [0,0,0,0],
+            [4,4,0,0],
+            [0,4,4,0]],
+
+            [[0,0,0,0],
+            [0,4,0,0],
+            [4,4,0,0],
+            [4,0,0,0]]],
+            #J
+            [[[0,0,0,0],
+            [5,0,0,0],
+            [5,5,5,0],
+            [0,0,0,0]],
+
+            [[0,0,0,0],
+            [0,5,5,0],
+            [0,5,0,0],
+            [0,5,0,0]],
+
+            [[0,0,0,0],
+            [0,0,0,0],
+            [5,5,5,0],
+            [0,0,5,0]],
+
+            [[0,0,0,0],
+            [0,5,0,0],
+            [0,5,0,0],
+            [5,5,0,0]]],
+            #L
+            [[[0,0,0,0],
+            [0,0,6,0],
+            [6,6,6,0],
+            [0,0,0,0]],
+
+            [[0,0,0,0],
+            [0,6,0,0],
+            [0,6,0,0],
+            [0,6,6,0]],
+
+            [[0,0,0,0],
+            [0,0,0,0],
+            [6,6,6,0],
+            [6,0,0,0]],
+
+            [[0,0,0,0],
+            [6,6,0,0],
+            [0,6,0,0],
+            [0,6,0,0]]],
+            #T
+            [[[0,0,0,0],
+            [0,7,0,0],
+            [7,7,7,0],
+            [0,0,0,0]],
+
+            [[0,0,0,0],
+            [0,7,0,0],
+            [0,7,7,0],
+            [0,7,0,0]],
+
+            [[0,0,0,0],
+            [0,0,0,0],
+            [7,7,7,0],
+            [0,7,0,0]],
+
+            [[0,0,0,0],
+            [0,7,0,0],
+            [7,7,0,0],
+            [0,7,0,0]]],
+        ]
         self.screen_width, self.screen_height = 300, 600
         self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
         self.clock = pygame.time.Clock()
         self.block_size = self.screen_width // 10
         self.board = [[0 for _ in range(10)] for _ in range(20)]
-        self.current_block = self.get_random_block()
+        self.current_block = self.block[self.nextDecide()]
         self.current_block_x = 3
         self.current_block_y = 0
         self.game_over = False
@@ -23,29 +169,25 @@ class Tetris:
             6: (255, 128, 0),
             7: (127, 0, 255),
         }
+        
 
     # ランダムなブロックを取得する関数
-    def get_random_block(self):
-        blocks = [
-            [[1, 1, 1, 1]],
-            [[2, 2], [2, 2]],
-            [[0, 3, 3], [3, 3, 0]],
-            [[4, 4, 0], [0, 4, 4]],
-            [[5, 0, 0], [5, 5, 5]],
-            [[0, 0, 6], [6, 6, 6]],
-            [[0, 7, 0], [7, 7, 7]],
-            
-        ]
-        return random.choice(blocks)
-
+    def nextDecide(self):
+        if(self.next_count == -1):
+            random.shuffle(self.val)
+        self.next_count += 1
+        if self.next_count == 7:
+            random.shuffle(self.val)
+            self.next_count = 0
+        return int(self.val[self.next_count])
 
     
     # ブロックを描画する関数
     def draw_block(self):
-        for y in range(len(self.current_block)):
-            for x in range(len(self.current_block[y])):
-                if self.current_block[y][x] != 0:
-                    block_type = self.current_block[y][x]  # ブロックの種類を取得
+        for y in range(4):
+            for x in range(4):
+                if self.current_block[self.dir][y][x] != 0:
+                    block_type = self.current_block[self.dir][y][x] 
                     block_color = self.block_colors[block_type]  # ブロックの色を取得
 
                     pygame.draw.rect(self.screen, block_color, ((self.current_block_x + x) * self.block_size, (self.current_block_y + y) * self.block_size, self.block_size, self.block_size))
@@ -60,7 +202,7 @@ class Tetris:
     def check_collision(self, block, x, y):
         for row in range(len(block)):
             for col in range(len(block[row])):
-                if block[row][col] != 0:
+                if block[self.dir][row][col] != 0:
                     if (
                         y + row >= len(self.board) or
                         x + col < 0 or x + col >= len(self.board[0]) or
@@ -78,23 +220,28 @@ class Tetris:
 
     # ブロックを時計回りに90度回転させる関数
     def rotate_block(self):
-        rotated_block = [[self.current_block[y][x] for y in range(len(self.current_block))] for x in range(len(self.current_block[0]) - 1, -1, -1)]
-        if not self.check_collision(rotated_block, self.current_block_x, self.current_block_y):
-            self.current_block = rotated_block
+        if self.dir == 3:
+            self.dir = 0
+        else:
+            self.dir += 1
 
     # ブロックを反時計回りに90度回転させる関数
     def rotate_block_counter_clockwise(self):
-        rotated_block = [[self.current_block[x][y] for x in range(len(self.current_block))] for y in range(len(self.current_block[0]) - 1, -1, -1)]
-        if not self.check_collision(rotated_block, self.current_block_x, self.current_block_y):
-            self.current_block = rotated_block
+        if self.dir == 0:
+            self.dir = 3
+        else:
+            self.dir -= 1
 
     # ブロックを固定する関数
     def lock_block(self):
-        for y in range(len(self.current_block)):
-            for x in range(len(self.current_block[y])):
-                if self.current_block[y][x] != 0:
+        for y in range(4):
+            for x in range(4):
+                if self.current_block[self.dir][y][x] != 0:
+                    block_type = self.current_block[self.dir][y][x] 
+                    block_color = self.block_colors[block_type]
                     # ブロックが固定された後、盤面にブロックの種類情報を保持する
                     self.board[self.current_block_y + y][self.current_block_x + x] = self.current_block[y][x]
+                    pygame.draw.rect(self.screen, block_color, ((self.current_block_x + x) * self.block_size, (self.current_block_y + y) * self.block_size, self.block_size, self.block_size))
         self.clear_lines()
 
     # ラインを削除する関数
@@ -136,7 +283,7 @@ class Tetris:
                         while not self.check_collision(self.current_block, self.current_block_x, self.current_block_y + 1):
                             self.current_block_y += 1
                         self.lock_block()
-                        self.current_block = self.get_random_block()
+                        self.current_block = self.block[self.nextDecide()]
                         self.current_block_x = 3
                         self.current_block_y = 0
                         if self.check_game_over():
@@ -156,7 +303,7 @@ class Tetris:
                     else:
                         if current_time - lag_end_time >= lag_time:  # ラグ時間を超えたらブロックを固定
                             self.lock_block()
-                            self.current_block = self.get_random_block()
+                            self.current_block = self.block[self.nextDecide()]
                             self.current_block_x = 3
                             self.current_block_y = 0
                             if self.check_game_over():
