@@ -209,7 +209,15 @@ class Tetris():
             6: (255, 128, 0),
             7: (127, 0, 255),
             8: (128, 128, 128),
-            9: (0,111,111)}
+            9: (0,111,111),
+            10: (153, 255, 255),
+            20: (255, 255, 153),
+            30: (153, 255, 153),
+            40: (255, 153, 153),
+            50: (153, 153, 255),
+            60: (255, 204, 153),
+            70: (204, 153, 255)}
+        
         self.initial_x = 3
         self.initial_y = 0
         self.x = self.initial_x
@@ -220,6 +228,11 @@ class Tetris():
         self.next_display = 6
         self.score = 0
         self.line = 0
+        self.hold = 0
+        self.useHold = False
+        self.ghostY = 0
+        self.count = 0
+        self.game_over = False
 
     #nextをランダムに決める
     def nextDecide(self):
@@ -261,12 +274,35 @@ class Tetris():
         elif move == 2:
             self.minoDrop()
 
+    #自由落下
+    def free_fall(self):
+        self.minoMoving(2,1)
+
     #描画
     def draw(self):
+        #mino
         for i in range (2,24):
             for j in range (14):
                 rect = pygame.Rect(120+30*j,30*(i - self.Field_top),30,30)
                 self.screen.fill(self.block_colors[self.Field[i][j]], rect)
+        #ghost
+        for i in range (4):
+            for j in range (4):
+                if self.block[self.next[0]][self.dir][i][j] != 0:
+                    rect = pygame.Rect(180+30*(self.x+j),30*(self.ghost()+i)-30,30,30)
+                    self.screen.fill(self.block_colors[10* self.next[0]], rect)
+        #line
+        for i in range(9):
+            pygame.draw.line(self.screen, (200,200,200), (210+30*i, 0), (210+30*i, 600), 1)
+        for i in range(19):
+            pygame.draw.line(self.screen, (200,200,200), (180, i*30 + 30), (480, i*30 + 30), 1)
+
+    #Ghost表示
+    def ghost(self):
+        self.ghostY = 0
+        while(self.MoveCheck(2,1,0,self.ghostY)):
+            self.ghostY += 1
+        return self.ghostY + self.y
 
     #ブロックの位置情報を更新して描画
     def minoDrawing(self, m, d):
@@ -319,10 +355,11 @@ class Tetris():
         self.x = self.initial_x
         self.y = self.initial_y
         self.dir = 0
+        self.useHold = False
+        self.count = 0
     
     #next表示
     def next_draw(self):
-        SQUARE_NEXT = 10
         nextField = [[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0]]
         for n in range(1,self.next_display+1):
             rect = pygame.Rect(550, (n-1)*105, 96, 96)
@@ -332,6 +369,36 @@ class Tetris():
                     if self.block[self.next[n]][0][i][j] != 0:
                         rect = pygame.Rect(550 + 16*(j+1), (n-1)*105 + 16*(i+1),16,16)
                         self.screen.fill(self.block_colors[self.block[self.next[n]][0][i][j]], rect)
+
+    #hold表示
+    def hold_draw(self):
+        rect = pygame.Rect(10, 0, 96, 96)
+        self.screen.fill((self.block_colors[0]), rect)
+        holdField = [[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0]]
+        for i in range(4):
+            for j in range(4):
+                if self.block[self.hold][0][i][j] != 0:
+                        rect = pygame.Rect(10 + 16*(j+1), 16*(i+1),16,16)
+                        self.screen.fill(self.block_colors[self.block[self.hold][0][i][j]], rect)
+    def hold_control(self):
+        for i in range(4):
+            for j in range(4):
+                target = self.Field[i + self.y + self.Field_top -1][j + self.x + self.Field_wall]
+                if target == self.block[self.next[0]][self.dir][i][j]:
+                    self.Field[i + self.y + self.Field_top -1][j + self.x + self.Field_wall] = 0
+        if self.hold == 0:
+            self.hold = self.next[0]
+            self.nextTONext()
+        else:
+            tmp = self.next[0]
+            self.next[0] = self.hold
+            self.hold = tmp
+        self.x = self.initial_x
+        self.y = self.initial_y
+        self.dir = 0
+        self.hold_draw()
+        self.minoDrawing(self.next[0],0)
+        self.useHold = True
 
     #ブロックの回転
     def rotate_block(self, turn):
@@ -489,14 +556,22 @@ class Tetris():
     def run(self):
         pygame.init()
         pygame.display.set_caption("Test")
+        clock = pygame.time.Clock()
+        time = 1000
+        self.count = 0
         
 
-        while(1):
+        while self.game_over == False:
+            self.count += 1/time
             self.screen.fill((0,0,0))
             self.nextDecide()
             self.next_draw()
+            self.hold_draw()
             self.minoDrawing(self.next[0], self.dir)
             pygame.display.update()
+            if(self.count >= 0.5):
+                self.free_fall()
+                self.count = 0
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -508,6 +583,9 @@ class Tetris():
                         self.minoMoving(1,1)
                     elif event.key == pygame.K_s:
                         self.minoMoving(2,1)
+                    elif event.key == pygame.K_SPACE:
+                        if self.useHold == False:
+                            self.hold_control()
                         #self.score += 2
                     elif event.key == pygame.K_RIGHT:  # 「→」ボタンを時計回りの回転操作に割り当てる例
                         self.rotate_block(1)
@@ -524,6 +602,8 @@ class Tetris():
                 if event.type == QUIT:
                     pygame.quit()
                     sys.exit()
+            
+            clock.tick(time)
 
 # メイン関数
 def main():
