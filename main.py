@@ -12,7 +12,7 @@ class Tetris():
         self.Field_hight = 20
         self.Field_wall = 2
         self.Field_top = 2
-        self.screen = pygame.display.set_mode((800, 800))
+        self.screen = pygame.display.set_mode((1000, 660))
         self.block = [
             #null
             [[[0,0,0,0],
@@ -233,6 +233,12 @@ class Tetris():
         self.ghostY = 0
         self.count = 0
         self.game_over = False
+        self.useTspin = False
+        self.useTspinMini = False
+        self.BackToBack = False
+        self.ren = 0
+        self.message = ""
+        
 
     #nextをランダムに決める
     def nextDecide(self):
@@ -270,6 +276,7 @@ class Tetris():
                 self.y += pwr
             elif move == 3:
                 self.x += -pwr
+            self.useSpin = False
             self.minoDrawing(self.next[0], self.dir)
         elif move == 2:
             self.minoDrop()
@@ -296,6 +303,8 @@ class Tetris():
             pygame.draw.line(self.screen, (200,200,200), (210+30*i, 0), (210+30*i, 600), 1)
         for i in range(19):
             pygame.draw.line(self.screen, (200,200,200), (180, i*30 + 30), (480, i*30 + 30), 1)
+        #Score
+        self.score_draw()
 
     #Ghost表示
     def ghost(self):
@@ -351,10 +360,13 @@ class Tetris():
     def minoDrop(self):
         self.minoDrawing(self.next[0], self.dir)
         self.nextTONext()
-        self.minoDelete()
+        line = self.minoDelete()
+        self.score_cal(line)
         self.x = self.initial_x
         self.y = self.initial_y
         self.dir = 0
+        if self.DuplicateCheck() == False:
+            self.game_over = True
         self.useHold = False
         self.count = 0
     
@@ -416,14 +428,17 @@ class Tetris():
             self.dir = 3
         if self.dir > 3:
             self.dir = 0
-        
+        self.useSpin = True
         if self.DuplicateCheck() == False:
             if self.SuperRotation(dirTmp) == False:
                 self.dir = dirTmp
+        if self.next[0] == 7:
+            self.TspinCheck()
         self.minoDrawing(self.next[0], self.dir)
     
     #ライン消去
     def minoDelete(self):
+        delete_line = 0
         for i in range(20):
             flag = False
             for j in range(10):
@@ -437,6 +452,8 @@ class Tetris():
                         self.Field[j][k + self.Field_wall] = self.Field[j-1][k + self.Field_wall]
                         self.Field[j-1][k + self.Field_wall] = 0
                 self.line += 1
+                delete_line += 1
+        return delete_line
                 
     #ブロック重複チェック
     def DuplicateCheck(self, srsy = 0, srsx = 0):
@@ -450,6 +467,7 @@ class Tetris():
     def SuperRotation(self, dirOld):
         movex = 0
         movey = 0
+        self.lastSRS = 0
         #I以外
         if self.next[0] != 1:
             if self.dir == 1:
@@ -461,11 +479,13 @@ class Tetris():
                     movex = 1
                 elif dirOld == 3:
                     movex = -1
+            self.lastSRS += 1
             if self.DuplicateCheck(movey, movex) == False:
                 if self.dir == 1 or self.dir == 3:
                     movey = -1
                 elif self.dir == 0 or self.dir == 2:
                     movey = 1
+                self.lastSRS += 1
                 if self.DuplicateCheck(movey, movex) == False:
                     movex = 0
                     movey = 0
@@ -473,6 +493,7 @@ class Tetris():
                         movey = 2
                     elif self.dir == 0 or self.dir == 2:
                         movey = -2
+                    self.lastSRS += 1
                     if self.DuplicateCheck(movey, movex) == False:
                         if self.dir == 1:
                             movex = -1
@@ -483,6 +504,7 @@ class Tetris():
                                 movex = 1
                             elif dirOld == 3:
                                 movex = -1
+                        self.lastSRS += 1
                         if self.DuplicateCheck(movey, movex) == False:
                             return False
         #I（保留）
@@ -550,7 +572,134 @@ class Tetris():
         self.y += movey
         return True
         
+    #Tスピン判定
+    def TspinCheck(self):
+        tag = 0
+        point = [[1,0], [1,2], [3,0], [3,2]]
+        around =""
+        check_mini = False
+        for i in range(4):
+            if self.Field[self.y + point[i][0] + self.Field_top - 1][self.x + point[i][1] + self.Field_wall] != 0:
+                tag += 1
+                sav = 1
+            else:
+                sav = 0
+            around += str(sav)
+        #Tspin mini check
+        if tag == 3:
+            if self.dir == 0:#上
+                if around == "1011" or around == "0111":
+                    check_mini = True
+            if self.dir == 1:#右
+                if around == "1110" or around == "1011":
+                    check_mini = True
+            if self.dir == 2:#下
+                if around == "1101" or around == "1110":
+                    check_mini = True
+            if self.dir == 3:#左
+                if around == "0111" or around == "1101":
+                    check_mini = True 
+        #Tspin check
+        if tag >= 3 and self.useSpin:
+            self.useTspin = True
+            if check_mini and self.lastSRS != 4:
+                self.useTspinMini = True
+        self.lastSRS = 0
 
+    #スコア表示
+    def score_draw(self):
+        font = pygame.font.Font(None,50)
+        text_score = font.render("Score : " + str(self.score) , True, (255,255,255),0)
+        self.screen.blit(text_score, (700, 100))
+        text_line = font.render("Line : " + str(self.line) , True, (255,255,255),0)
+        self.screen.blit(text_line, (700, 200))
+        for i in range(1, numpy.size(self.message)):
+            text_message = font.render(str(self.message[i]) , True, (190,20,100),0)
+            self.screen.blit(text_message, (700, 400 + 50*i))
+
+    #スコア計算
+    def score_cal(self, line):
+        self.message = [0]
+        point = 0
+        btb = False
+        #Tspin
+        if self.useTspin:
+            self.useTspin = False
+            self.message.append("T-Spin")
+            if line == 0:
+                point = 400
+            elif line == 1:
+                self.message.append("Single")
+                point = 800
+            elif line == 2:
+                self.message.append("Double")
+                point = 1200
+            elif line == 3:
+                self.message.append("Triple")
+                point = 1600
+            if self.useTspinMini:
+                self.useTspinMini = False
+                self.message.append("Mini")
+                point += 100
+            if line != 0:
+                btb = True
+        #ライン消し
+        else:
+            if line == 1:
+                point = 100
+            elif line == 2:
+                point = 300
+            elif line == 3:
+                point = 500
+            elif line == 4:
+                self.message.append("TETRIS")
+                point = 800
+                btb = True
+            btb = False
+        #Back To Back
+        if self.BackToBack and btb:
+            point = int(point*1.5)
+        elif btb == False:
+            BackToBack = False
+        #REN
+        if line > 0:
+            if self.ren > 0:
+                self.ren += 1
+                if self.message == [0]:
+                    self.message.append(str(self.ren) + " REN")
+            else:
+                self.ren += 1
+            point += 50 * self.ren
+        else:
+            self.ren = 0
+        #Perfect Clear
+        perfect = True
+        for i in range(self.Field_hight):
+            for j in range(self.Field_width):
+                if self.Field[i + self.Field_top][j + self.Field_wall] != 0:
+                    perfect = False
+        if perfect:
+            self.message.append("PERFECT")
+            self.message.append("CREAR")
+            if line == 1:
+                point += 800
+            elif line == 2:
+                point = 1000
+            elif line == 3:
+                point = 1800
+            elif line == 4:
+                point = 2000
+        #BTB ならばメッセージ追加
+        if self.BackToBack and btb:
+            self.message.append("")
+            self.message.append("Back To")
+            self.message.append("Back")
+        #BTB false->true
+        if self.BackToBack == False and btb:
+            self.BackToBack = True
+
+        
+            
 
     #メインで実行する関数
     def run(self):
@@ -586,7 +735,7 @@ class Tetris():
                     elif event.key == pygame.K_SPACE:
                         if self.useHold == False:
                             self.hold_control()
-                        #self.score += 2
+                        self.score += 2
                     elif event.key == pygame.K_RIGHT:  # 「→」ボタンを時計回りの回転操作に割り当てる例
                         self.rotate_block(1)
                     elif event.key == pygame.K_LEFT:  # 「←」ボタンを反時計回りの回転操作に割り当てる例
@@ -595,7 +744,9 @@ class Tetris():
                         #ハードドロップ
                         while(self.MoveCheck(2,1)):
                             self.minoMoving(2,1)
+                            self.score += 2
                         self.minoMoving(2,1)
+                        self.score += 2
 
 
             for event in pygame.event.get():
@@ -604,6 +755,7 @@ class Tetris():
                     sys.exit()
             
             clock.tick(time)
+        print(self.score)
 
 # メイン関数
 def main():
