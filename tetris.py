@@ -1,17 +1,37 @@
 import pygame
+from pygame.locals import *
 import random
+import numpy
+import sys
 
-# テトリスのゲームクラス
-class Tetris:
-    next_count = -1
-    val = [0,1,2,3,4,5,6]
-    dir = 0
-
+class Tetris():
     def __init__(self):
-        pygame.init()
-        self.score = 0
-        self.line = 0
+        self.Field_width = 10
+        self.Field_hight = 20
+        self.Field_wall = 2
+        self.Field_top = 2
+        self.screen = pygame.display.set_mode((1000, 660))
         self.block = [
+            #null
+            [[[0,0,0,0],
+            [0,0,0,0],
+            [0,0,0,0],
+            [0,0,0,0]],
+
+            [[0,0,0,0],
+            [0,0,0,0],
+            [0,0,0,0],
+            [0,0,0,0]],
+
+            [[0,0,0,0],
+            [0,0,0,0],
+            [0,0,0,0],
+            [0,0,0,0]],
+
+            [[0,0,0,0],
+            [0,0,0,0],
+            [0,0,0,0],
+            [0,0,0,0]]],
             #I
             [[[0,0,0,0],
             [1,1,1,1],
@@ -151,18 +171,34 @@ class Tetris:
             [[0,0,0,0],
             [0,7,0,0],
             [7,7,0,0],
-            [0,7,0,0]]],
-        ]
-        self.screen_width, self.screen_height = 300, 600
-        self.screen = pygame.display.set_mode((self.screen_width*2, self.screen_height))
-        self.clock = pygame.time.Clock()
-        self.block_size = self.screen_width // 10
-        self.board = [[0 for _ in range(10)] for _ in range(20)]
-        self.current_block = self.block[self.nextDecide()]
-        self.current_block_x = 3
-        self.current_block_y = 0
-        self.game_over = False
+            [0,7,0,0]]],]
+        self.Field = [[8,8, 0,0,0,0,0,0,0,0,0,0, 8,8],
+                    [8,8, 0,0,0,0,0,0,0,0,0,0, 8,8],
+                    [8,8, 0,0,0,0,0,0,0,0,0,0, 8,8],
+                    [8,8, 0,0,0,0,0,0,0,0,0,0, 8,8],
+                    [8,8, 0,0,0,0,0,0,0,0,0,0, 8,8],
+                    [8,8, 0,0,0,0,0,0,0,0,0,0, 8,8],
+                    [8,8, 0,0,0,0,0,0,0,0,0,0, 8,8],
+                    [8,8, 0,0,0,0,0,0,0,0,0,0, 8,8],
+                    [8,8, 0,0,0,0,0,0,0,0,0,0, 8,8],
+                    [8,8, 0,0,0,0,0,0,0,0,0,0, 8,8],
+                    [8,8, 0,0,0,0,0,0,0,0,0,0, 8,8],
+                    [8,8, 0,0,0,0,0,0,0,0,0,0, 8,8],
+                    [8,8, 0,0,0,0,0,0,0,0,0,0, 8,8],
+                    [8,8, 0,0,0,0,0,0,0,0,0,0, 8,8],
+                    [8,8, 0,0,0,0,0,0,0,0,0,0, 8,8],
+                    [8,8, 0,0,0,0,0,0,0,0,0,0, 8,8],
+                    [8,8, 0,0,0,0,0,0,0,0,0,0, 8,8],
+                    [8,8, 0,0,0,0,0,0,0,0,0,0, 8,8],
+                    [8,8, 0,0,0,0,0,0,0,0,0,0, 8,8],
+                    [8,8, 0,0,0,0,0,0,0,0,0,0, 8,8],
+                    [8,8, 0,0,0,0,0,0,0,0,0,0, 8,8],
+                    [8,8, 0,0,0,0,0,0,0,0,0,0, 8,8],
+                    [8,8, 8,8,8,8,8,8,8,8,8,8, 8,8],
+                    [8,8, 8,8,8,8,8,8,8,8,8,8, 8,8]
+                    ]
         self.block_colors = {
+            0: (255, 255, 255),
             1: (0, 255, 255),
             2: (255, 255, 0),
             3: (0, 255, 0),
@@ -170,299 +206,554 @@ class Tetris:
             5: (0, 0, 255),
             6: (255, 128, 0),
             7: (127, 0, 255),
-        }
+            8: (128, 128, 128),
+            9: (0,111,111),
+            10: (153, 255, 255),
+            20: (255, 255, 153),
+            30: (153, 255, 153),
+            40: (255, 153, 153),
+            50: (153, 153, 255),
+            60: (255, 204, 153),
+            70: (204, 153, 255)}
+        
+        self.initial_x = 3
+        self.initial_y = 0
+        self.x = self.initial_x
+        self.y = self.initial_y
+        self.next = [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+        self.tonextCount = 0
+        self.dir = 0
+        self.next_display = 6
+        self.score = 0
+        self.line = 0
+        self.hold = 0
+        self.useHold = False
+        self.ghostY = 0
+        self.count = 0
+        self.game_over = False
+        self.useTspin = False
+        self.useTspinMini = False
+        self.BackToBack = False
+        self.ren = 0
+        self.message = ""
         
 
-    # ランダムなブロックを取得する関数
+    #nextをランダムに決める
     def nextDecide(self):
-        if(self.next_count == -1):
-            random.shuffle(self.val)
-        self.next_count += 1
-        if self.next_count == 7:
-            random.shuffle(self.val)
-            self.next_count = 0
-        return int(self.val[self.next_count])
+        val = [7,1,2,3,4,5,6]
+        loop = int(numpy.size(self.next) / 7)
+        for i in range (loop):
+            if self.next[i * 7] == 0:
+                random.shuffle(val)
+                for j in range (7):
+                    self.next[i * 7 + j] = val[j]
 
+    #nextを更新
+    def nextTONext(self):
+        for i in range (numpy.size(self.next)-1):
+            self.next[i] = self.next[i+1]
+        self.next[numpy.size(self.next)-1] = 0
+        self.tonextCount += 1
+        if self.tonextCount == 7:
+            self.nextDecide()
+            self.tonextCount = 0
+
+    #方向と距離を引数とした、ブロックの移動
+    def minoMoving(self, move, pwr):
+        for i in range (4):
+            for j in range (4):
+                target = self.Field[i + self.y + self.Field_top -1][j + self.x + self.Field_wall]
+                if target == self.block[self.next[0]][self.dir][i][j]:
+                    self.Field[i + self.y + self.Field_top -1][j + self.x + self.Field_wall] = 0
+        if self.MoveCheck(move, pwr, self.x, self.y, self.next[0]):
+            if move == 0:
+                self.y += -pwr
+            elif move == 1:
+                self.x += pwr
+            elif move == 2:
+                self.y += pwr
+            elif move == 3:
+                self.x += -pwr
+            self.useSpin = False
+            self.minoDrawing(self.next[0], self.dir)
+        elif move == 2:
+            self.minoDrop()
+
+    #自由落下
+    def free_fall(self):
+        self.minoMoving(2,1)
+
+    #描画
+    def draw(self):
+        #mino
+        for i in range (2,24):
+            for j in range (14):
+                rect = pygame.Rect(120+30*j,30*(i - self.Field_top),30,30)
+                self.screen.fill(self.block_colors[self.Field[i][j]], rect)
+        #ghost
+        for i in range (4):
+            for j in range (4):
+                if self.block[self.next[0]][self.dir][i][j] != 0:
+                    rect = pygame.Rect(180+30*(self.x+j),30*(self.ghost()+i)-30,30,30)
+                    self.screen.fill(self.block_colors[10* self.next[0]], rect)
+        #line
+        for i in range(9):
+            pygame.draw.line(self.screen, (200,200,200), (210+30*i, 0), (210+30*i, 600), 1)
+        for i in range(19):
+            pygame.draw.line(self.screen, (200,200,200), (180, i*30 + 30), (480, i*30 + 30), 1)
+        #Score
+        self.score_draw()
+
+    #Ghost表示
+    def ghost(self):
+        self.ghostY = 0
+        while(self.MoveCheck(2,1,self.x, self.y, self.next[0], 0,self.ghostY)):
+            self.ghostY += 1
+        return self.ghostY + self.y
+
+    #ブロックの位置情報を更新して描画
+    def minoDrawing(self, m, d):
+        for i in range(4):
+            for j in range(4):
+                if self.block[m][d][i][j] != 0:
+                    self.Field[i + self.y + self.Field_top -1][j + self.x + self.Field_wall] = self.block[m][d][i][j]
+        self.draw()
     
-    # ブロックを描画する関数
-    def draw_block(self):
-        for y in range(4):
-            for x in range(4):
-                if self.current_block[self.dir][y][x] != 0:
-                    block_type = self.current_block[self.dir][y][x] 
-                    block_color = self.block_colors[block_type]  # ブロックの色を取得
-
-                    pygame.draw.rect(self.screen, block_color, ((self.current_block_x + x) * self.block_size, (self.current_block_y + y) * self.block_size, self.block_size, self.block_size))
-
-    # ブロックを移動する関数
-    def move_block(self, x, y):
-        if not self.check_collision(self.current_block, self.current_block_x + x, self.current_block_y + y):
-            self.current_block_x += x
-            self.current_block_y += y
-
-    # ブロックの衝突判定を行う関数
-    def check_collision(self, direction, ):
-        dirx = 0
+    #衝突判定
+    def MoveCheck(self, direction, power, self_x, self_y, mino, srsx=0, srsy=0):
         diry = 0
-        checked = { false, false, false, false}
+        dirx = 0
+        checked = [False, False, False, False]
         for i in range(4):
             for j in range(4):
                 if direction == 0:
                     diry = i
                     dirx = j
-                    break
                 elif direction == 1:
                     diry = j
                     dirx = 3-i
-                    break
                 elif direction == 2:
                     diry = 3-i
                     dirx = j
-                    break
                 elif direction == 3:
                     diry = j
                     dirx = i
-                    break
-            
-                if direction == 0:
-                    if (field[diry + y - power + FIELD_SPACE - 1 + srsy, dirx + x + FIELD_WALL + srsx] != 0 and !chked[j]:
-                            return false;
+                if self.block[mino][self.dir][diry][dirx] != 0:
+                    if direction == 0:
+                        if self.Field[diry + self_y - power + self.Field_top - 1 + srsy][dirx + self_x + self.Field_wall + srsx] != 0 and checked[j] != True:
+                            return False
+                    elif direction == 1:
+                        if self.Field[diry + self_y + self.Field_top - 1 + srsy][dirx + self_x + power + self.Field_wall + srsx] != 0 and checked[j] != True:
+                            return False
+                    elif direction == 2:
+                        if self.Field[diry + self_y + power + self.Field_top - 1 + srsy][dirx + self_x + self.Field_wall + srsx] != 0 and checked[j] != True:
+                            return False
+                    elif direction == 3:
+                        if self.Field[diry + self_y + self.Field_top - 1 + srsy][dirx + self_x - power + self.Field_wall + srsx] != 0 and checked[j] != True:
+                            return False
+                    checked[j] = True
+        return True
 
+    #ブロック設置
+    def minoDrop(self):
+        self.minoDrawing(self.next[0], self.dir)
+        self.nextTONext()
+        line = self.minoDelete()
+        self.score_cal(line)
+        self.x = self.initial_x
+        self.y = self.initial_y
+        self.dir = 0
+        if self.DuplicateCheck() == False:
+            self.game_over = True
+        self.useHold = False
+        self.count = 0
+    
+    #next表示
+    def next_draw(self):
+        nextField = [[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0]]
+        for n in range(1,self.next_display+1):
+            rect = pygame.Rect(550, (n-1)*105, 96, 96)
+            self.screen.fill((self.block_colors[0]), rect)
+            for i in range(4):
+                for j in range(4):
+                    if self.block[self.next[n]][0][i][j] != 0:
+                        rect = pygame.Rect(550 + 16*(j+1), (n-1)*105 + 16*(i+1),16,16)
+                        self.screen.fill(self.block_colors[self.block[self.next[n]][0][i][j]], rect)
 
-
-    # 一列揃ったら消す関数
-    def clear_lines(self):
-        lines_to_clear = [i for i, row in enumerate(self.board) if 0 not in row]
-        for line in lines_to_clear:
-            del self.board[line]
-            self.board.insert(0, [0 for _ in range(10)])
-            self.score += 100
-
-    # ブロックを時計回りに90度回転させる関数
-    def rotate_block(self):
-        if self.dir == 3:
-            self.dir = 0
+    #hold表示
+    def hold_draw(self):
+        rect = pygame.Rect(10, 0, 96, 96)
+        self.screen.fill((self.block_colors[0]), rect)
+        holdField = [[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,0,0,0]]
+        for i in range(4):
+            for j in range(4):
+                if self.block[self.hold][0][i][j] != 0:
+                        rect = pygame.Rect(10 + 16*(j+1), 16*(i+1),16,16)
+                        self.screen.fill(self.block_colors[self.block[self.hold][0][i][j]], rect)
+    def hold_control(self):
+        for i in range(4):
+            for j in range(4):
+                target = self.Field[i + self.y + self.Field_top -1][j + self.x + self.Field_wall]
+                if target == self.block[self.next[0]][self.dir][i][j]:
+                    self.Field[i + self.y + self.Field_top -1][j + self.x + self.Field_wall] = 0
+        if self.hold == 0:
+            self.hold = self.next[0]
+            self.nextTONext()
         else:
-            self.dir += 1
+            tmp = self.next[0]
+            self.next[0] = self.hold
+            self.hold = tmp
+        self.x = self.initial_x
+        self.y = self.initial_y
+        self.dir = 0
+        self.hold_draw()
+        self.minoDrawing(self.next[0],0)
+        self.useHold = True
 
-    # ブロックを反時計回りに90度回転させる関数
-    def rotate_block_counter_clockwise(self):
-        if self.dir == 0:
-            self.dir = 3
-        else:
+    #ブロックの回転
+    def rotate_block(self, turn):
+        for i in range (4):
+            for j in range (4):
+                target = self.Field[i + self.y + self.Field_top -1][j + self.x + self.Field_wall]
+                if target == self.block[self.next[0]][self.dir][i][j]:
+                    self.Field[i + self.y + self.Field_top -1][j + self.x + self.Field_wall] = 0
+        dirTmp = self.dir
+        if turn == 0:#反時計周り
             self.dir -= 1
+        elif turn == 1:#時計周り
+            self.dir += 1
+        if self.dir < 0:
+            self.dir = 3
+        if self.dir > 3:
+            self.dir = 0
+        self.useSpin = True
+        if self.DuplicateCheck() == False:
+            if self.SuperRotation(dirTmp) == False:
+                self.dir = dirTmp
+        if self.next[0] == 7:
+            self.TspinCheck()
+        self.minoDrawing(self.next[0], self.dir)
+    
+    #ライン消去
+    def minoDelete(self):
+        delete_line = 0
+        for i in range(20):
+            flag = False
+            for j in range(10):
+                if self.Field[i + self.Field_top][j + self.Field_wall] == 0:
+                    break
+                if j == self.Field_width - 1:
+                    flag = True
+            if flag:
+                for j in reversed(range(self.Field_top+1, i + self.Field_top + 1)):
+                    for k in range(self.Field_width):
+                        self.Field[j][k + self.Field_wall] = self.Field[j-1][k + self.Field_wall]
+                        self.Field[j-1][k + self.Field_wall] = 0
+                self.line += 1
+                delete_line += 1
+        return delete_line
+                
+    #ブロック重複チェック
+    def DuplicateCheck(self, srsy = 0, srsx = 0):
+        for i in range(4):
+            for j in range(4):
+                if self.Field[i + self.y + self.Field_top - 1 + srsy][j + self.x + self.Field_wall + srsx] != 0 and self.block[self.next[0]][self.dir][i][j] != 0:
+                    return False
+        return True
 
-    # ブロックを固定する関数
-    def lock_block(self):
-        self.draw_block()
-        self.clear_lines()
+    #スーパーローテーション
+    def SuperRotation(self, dirOld):
+        movex = 0
+        movey = 0
+        self.lastSRS = 0
+        #I以外
+        if self.next[0] != 1:
+            if self.dir == 1:
+                movex = -1
+            elif self.dir == 3:
+                movex = 1
+            elif self.dir == 0 or self.dir == 2:
+                if dirOld == 1:
+                    movex = 1
+                elif dirOld == 3:
+                    movex = -1
+            self.lastSRS += 1
+            if self.DuplicateCheck(movey, movex) == False:
+                if self.dir == 1 or self.dir == 3:
+                    movey = -1
+                elif self.dir == 0 or self.dir == 2:
+                    movey = 1
+                self.lastSRS += 1
+                if self.DuplicateCheck(movey, movex) == False:
+                    movex = 0
+                    movey = 0
+                    if self.dir == 1 or self.dir == 3:
+                        movey = 2
+                    elif self.dir == 0 or self.dir == 2:
+                        movey = -2
+                    self.lastSRS += 1
+                    if self.DuplicateCheck(movey, movex) == False:
+                        if self.dir == 1:
+                            movex = -1
+                        elif self.dir == 3:
+                            movex = 1
+                        elif self.dir == 0 or self.dir == 2:
+                            if dirOld == 1:
+                                movex = 1
+                            elif dirOld == 3:
+                                movex = -1
+                        self.lastSRS += 1
+                        if self.DuplicateCheck(movey, movex) == False:
+                            return False
+        #I（保留）
+        else:
+            if self.dir == 1:
+                movex = 1
+            elif self.dir == 3:
+                movex = -1
+            elif self.dir == 0 or self.dir == 2:
+                if dirOld == 1:
+                    movex = -1
+                elif dirOld == 3:
+                    movex = 1
+                if self.dir == 0:
+                    movex *= 2
+            pt1x = movex
+            if self.DuplicateCheck(movey, movex) == False:
+                if self.dir == 1:
+                    movex = -1
+                elif self.dir == 3:
+                    movex = 1
+                elif self.dir == 0 or self.dir == 2:
+                    if dirOld == 1:
+                        movex = 1
+                    elif dirOld == 3:
+                        movex = -1
+                    if self.dir == 2:
+                        movex *= 2
+                pt2x = movex
+                if self.DuplicateCheck(movey, movex) == False:
+                    if self.dir == 1:
+                        movex = pt1x
+                        movey = 1
+                    elif self.dir == 3:
+                        movex = pt1x
+                        movey = -1
+                    elif self.dir == 0 or self.dir == 2:
+                        if dirOld == 1:
+                            movex = pt1x
+                            movey = -1
+                        elif dirOld == 3:
+                            movex = pt2x
+                            movey = 1
+                    if dirOld == 0 and self.dir == 3 or dirOld == 3 and self.dir == 2 or dirOld == 2 and self.dir == 1 or dirOld == 1 and self.dir == 0:
+                        movey *= 2
+                    if self.DuplicateCheck(movey, movex) == False:
+                        if self.dir == 1:
+                            movex = pt2x
+                            movey = -1
+                        elif self.dir == 3:
+                            movex = pt2x
+                            movey = 1
+                        elif self.dir == 0 or self.dir == 2:
+                            if dirOld == 1:
+                                movex = pt2x
+                                movey = 1
+                            elif dirOld == 3:
+                                movex = pt1x
+                                movey = -1
+                        if dirOld == 3 and self.dir == 0 or dirOld == 0 and self.dir == 1 or dirOld == 1 and self.dir == 2 or dirOld == 2 and self.dir == 3:
+                            movey *= 2
+                        if self.DuplicateCheck(movey, movex) == False:
+                            return False
+        self.x += movex
+        self.y += movey
+        return True
+        
+    #Tスピン判定
+    def TspinCheck(self):
+        tag = 0
+        point = [[1,0], [1,2], [3,0], [3,2]]
+        around =""
+        check_mini = False
+        for i in range(4):
+            if self.Field[self.y + point[i][0] + self.Field_top - 1][self.x + point[i][1] + self.Field_wall] != 0:
+                tag += 1
+                sav = 1
+            else:
+                sav = 0
+            around += str(sav)
+        #Tspin mini check
+        if tag == 3:
+            if self.dir == 0:#上
+                if around == "1011" or around == "0111":
+                    check_mini = True
+            if self.dir == 1:#右
+                if around == "1110" or around == "1011":
+                    check_mini = True
+            if self.dir == 2:#下
+                if around == "1101" or around == "1110":
+                    check_mini = True
+            if self.dir == 3:#左
+                if around == "0111" or around == "1101":
+                    check_mini = True 
+        #Tspin check
+        if tag >= 3 and self.useSpin:
+            self.useTspin = True
+            if check_mini and self.lastSRS != 4:
+                self.useTspinMini = True
+        self.lastSRS = 0
 
-    # ゲームオーバーかどうかをチェックする関数
-    def check_game_over(self):
-        return self.check_collision(self.current_block, self.current_block_x, self.current_block_y)
+    #スコア表示
+    def score_draw(self):
+        font = pygame.font.Font(None,50)
+        text_score = font.render("Score : " + str(self.score) , True, (255,255,255),0)
+        self.screen.blit(text_score, (700, 100))
+        text_line = font.render("Line : " + str(self.line) , True, (255,255,255),0)
+        self.screen.blit(text_line, (700, 200))
+        for i in range(1, numpy.size(self.message)):
+            text_message = font.render(str(self.message[i]) , True, (190,20,100),0)
+            self.screen.blit(text_message, (700, 400 + 50*i))
 
-    #ゲームオーバーしたらリセットする関数（学習用）
-    def reset(self):
-        self.run()
+    #スコア計算
+    def score_cal(self, line):
+        self.message = [0]
+        point = 0
+        btb = False
+        #Tspin
+        if self.useTspin:
+            self.useTspin = False
+            self.message.append("T-Spin")
+            if line == 0:
+                point = 400
+            elif line == 1:
+                self.message.append("Single")
+                point = 800
+            elif line == 2:
+                self.message.append("Double")
+                point = 1200
+            elif line == 3:
+                self.message.append("Triple")
+                point = 1600
+            if self.useTspinMini:
+                self.useTspinMini = False
+                self.message.append("Mini")
+                point += 100
+            if line != 0:
+                btb = True
+        #ライン消し
+        else:
+            if line == 1:
+                point = 100
+            elif line == 2:
+                point = 300
+            elif line == 3:
+                point = 500
+            elif line == 4:
+                self.message.append("TETRIS")
+                point = 800
+                btb = True
+            btb = False
+        #Back To Back
+        if self.BackToBack and btb:
+            point = int(point*1.5)
+        elif btb == False:
+            BackToBack = False
+        #REN
+        if line > 0:
+            if self.ren > 0:
+                self.ren += 1
+                if self.message == [0]:
+                    self.message.append(str(self.ren) + " REN")
+            else:
+                self.ren += 1
+            point += 50 * self.ren
+        else:
+            self.ren = 0
+        #Perfect Clear
+        perfect = True
+        for i in range(self.Field_hight):
+            for j in range(self.Field_width):
+                if self.Field[i + self.Field_top][j + self.Field_wall] != 0:
+                    perfect = False
+        if perfect:
+            self.message.append("PERFECT")
+            self.message.append("CREAR")
+            if line == 1:
+                point += 800
+            elif line == 2:
+                point = 1000
+            elif line == 3:
+                point = 1800
+            elif line == 4:
+                point = 2000
+        #BTB ならばメッセージ追加
+        if self.BackToBack and btb:
+            self.message.append("")
+            self.message.append("Back To")
+            self.message.append("Back")
+        #BTB false->true
+        if self.BackToBack == False and btb:
+            self.BackToBack = True
 
-    # ゲームのメインループ（プレイ用）
+        
+            
+
+    #メインで実行する関数
     def run(self):
-        # ゲームのメインループ
-        self.score = 0
-        self.line = 0
-        last_fall_time = 0
-        fall_speed = 1000  # ミリ秒単位で1秒ごとにブロックを落とす
-        lag_time = 4000  # ラグの時間を設定 (ミリ秒単位)
-        lag_end_time = 0  # ラグの終了時間を初期化
-        flag_drop_to_bottom = False
+        pygame.init()
+        pygame.display.set_caption("Test")
+        clock = pygame.time.Clock()
+        time = 1000
+        self.count = 0
+        
 
-        while not self.game_over:
-            current_time = pygame.time.get_ticks()
-            delta_time = current_time - last_fall_time
+        while self.game_over == False:
+            self.count += 1/time
+            self.screen.fill((0,0,0))
+            self.nextDecide()
+            self.next_draw()
+            self.hold_draw()
+            self.minoDrawing(self.next[0], self.dir)
+            pygame.display.update()
+            if(self.count >= 0.5):
+                self.free_fall()
+                self.count = 0
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.game_over = True
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_a:
-                        self.move_block(-1, 0)
+                        self.minoMoving(3,1)
                     elif event.key == pygame.K_d:
-                        self.move_block(1, 0)
+                        self.minoMoving(1,1)
                     elif event.key == pygame.K_s:
-                        self.move_block(0, 1)
+                        self.minoMoving(2,1)
+                    elif event.key == pygame.K_SPACE:
+                        if self.useHold == False:
+                            self.hold_control()
                         self.score += 2
-                    elif event.key == pygame.K_w:
-                        flag_drop_to_bottom = True
-                        while not self.check_collision(self.current_block, self.current_block_x, self.current_block_y + 1):
-                            self.current_block_y += 1
-                            self.score += 2
-                        self.lock_block()
-                        self.current_block = self.block[self.nextDecide()]
-                        self.current_block_x = 3
-                        self.current_block_y = 0
-                        if self.check_game_over():
-                            self.game_over = True
-                        flag_drop_to_bottom = False
-                        last_fall_time = current_time
                     elif event.key == pygame.K_RIGHT:  # 「→」ボタンを時計回りの回転操作に割り当てる例
-                        self.rotate_block()
+                        self.rotate_block(1)
                     elif event.key == pygame.K_LEFT:  # 「←」ボタンを反時計回りの回転操作に割り当てる例
-                        self.rotate_block_counter_clockwise()
+                        self.rotate_block(0)
+                    elif event.key == pygame.K_w:
+                        #ハードドロップ
+                        while(self.MoveCheck(2,1,self.x, self.y, self.next[0])):
+                            self.minoMoving(2,1)
+                            self.score += 2
+                        self.minoMoving(2,1)
+                        self.score += 2
 
-            if delta_time >= fall_speed:
-                if flag_drop_to_bottom == False:
-                    if not self.check_collision(self.current_block, self.current_block_x, self.current_block_y + 1):
-                        self.current_block_y += 1
-                        last_fall_time = current_time  # ブロックを移動した時間を更新
-                    else:
-                        if current_time - lag_end_time >= lag_time:  # ラグ時間を超えたらブロックを固定
-                            self.lock_block()
-                            self.current_block = self.block[self.nextDecide()]
-                            self.current_block_x = 3
-                            self.current_block_y = 0
-                            if self.check_game_over():
-                                self.game_over = True
-                            last_fall_time = current_time
-
-            self.screen.fill((0, 0, 0))
-            for y in range(len(self.board)):
-                for x in range(len(self.board[y])):
-                    if self.board[y][x] != 0:
-                        pygame.draw.rect(self.screen, (255, 255, 255), (x * self.block_size, y * self.block_size, self.block_size, self.block_size))
-            self.draw_block()
-            pygame.draw.line(self.screen, (255, 255, 255), (300,0), (300,600), 2)
-            # フォントの設定
-            font = pygame.font.Font(None, 36)  # Noneはデフォルトフォントを使用
-
-            # テキストの内容と色
-            text_content1 = "Score : " + str(self.score)
-            text_content2 = "Line : " + str(self.line)
-            text_color = (255,255,255)
-
-            # テキストを描画
-            text_surface1 = font.render(text_content1, True, text_color)
-            text_surface2 = font.render(text_content2, True, text_color)
-            # テキストの位置
-            text_rect1 = text_surface1.get_rect(center=(450, 200))
-            text_rect2 = text_surface2.get_rect(center=(450, 400))
-            self.screen.blit(text_surface1, text_rect1)
-            self.screen.blit(text_surface2, text_rect2)
-            pygame.display.flip()
-            self.clock.tick(6000)
-
-        if self.game_over:
-            print("Score : " + str(self.score))
-            print("Line : " + str(self.line))
-
-    ##############################################
-    #評価関数
-    def evaluate_board(self):
-        # 評価基準を組み合わせて総合的な評価を行う
-        height_penalty = -0.5 * max_height(state)
-        hole_penalty = -0.1 * count_holes(state)
-        clear_bonus = 1.0 * lines_cleared(state)
-
-        # 各評価基準に対するペナルティやボーナスを組み合わせて総合的な評価を計算
-        evaluation = height_penalty + hole_penalty + clear_bonus
-
-        return evaluation
-    
-
-
-    # ゲームのメインループ（機械学習用）
-    def ai_run(self):
-        # ゲームのメインループ
-        last_fall_time = 0
-        fall_speed = 1000  # ミリ秒単位で1秒ごとにブロックを落とす
-        lag_time = 4000  # ラグの時間を設定 (ミリ秒単位)
-        lag_end_time = 0  # ラグの終了時間を初期化
-        flag_drop_to_bottom = False
-
-        while not self.game_over:
-            current_time = pygame.time.get_ticks()
-            delta_time = current_time - last_fall_time
 
             for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.game_over = True
+                if event.type == QUIT:
+                    pygame.quit()
+                    sys.exit()
             
-            #AIの行動選択（ランダム）
-            ai_action = random.choice([1,2,3,4,5,6])
-
-            # 行動の前に1秒待つ
-            pygame.time.delay(50)
-
-            if ai_action == 1:
-                self.move_block(-1, 0)
-            elif ai_action == 2:
-                self.move_block(1, 0)
-            elif ai_action == 3:
-                self.move_block(0, 1)
-                self.score += 2
-            elif ai_action == 4:
-                flag_drop_to_bottom = True
-                while not self.check_collision(self.current_block, self.current_block_x, self.current_block_y + 1):
-                    self.current_block_y += 1
-                    self.score += 2
-                self.lock_block()
-                self.current_block = self.block[self.nextDecide()]
-                self.current_block_x = 3
-                self.current_block_y = 0
-                if self.check_game_over():
-                    self.game_over = True
-                flag_drop_to_bottom = False
-                last_fall_time = current_time
-            elif ai_action == 5:  # 「→」ボタンを時計回りの回転操作に割り当てる例
-                self.rotate_block()
-            elif ai_action == 6:  # 「←」ボタンを反時計回りの回転操作に割り当てる例
-                self.rotate_block_counter_clockwise()
-
-            if delta_time >= fall_speed:
-                if flag_drop_to_bottom == False:
-                    if not self.check_collision(self.current_block, self.current_block_x, self.current_block_y + 1):
-                        self.current_block_y += 1
-                        last_fall_time = current_time  # ブロックを移動した時間を更新
-                    else:
-                        if current_time - lag_end_time >= lag_time:  # ラグ時間を超えたらブロックを固定
-                            self.lock_block()
-                            self.current_block = self.block[self.nextDecide()]
-                            self.current_block_x = 3
-                            self.current_block_y = 0
-                            if self.check_game_over():
-                                self.game_over = True
-                            last_fall_time = current_time
-
-            self.screen.fill((0, 0, 0))
-            for y in range(len(self.board)):
-                for x in range(len(self.board[y])):
-                    if self.board[y][x] != 0:
-                        pygame.draw.rect(self.screen, (255, 255, 255), (x * self.block_size, y * self.block_size, self.block_size, self.block_size))
-            self.draw_block()
-            pygame.draw.line(self.screen, (255, 255, 255), (300,0), (300,600), 2)
-            # フォントの設定
-            font = pygame.font.Font(None, 36)  # Noneはデフォルトフォントを使用
-
-            # テキストの内容と色
-            text_content1 = "Score : " + str(self.score)
-            text_content2 = "Line : " + str(self.line)
-            text_color = (255,255,255)
-
-            # テキストを描画
-            text_surface1 = font.render(text_content1, True, text_color)
-            text_surface2 = font.render(text_content2, True, text_color)
-            # テキストの位置
-            text_rect1 = text_surface1.get_rect(center=(450, 200))
-            text_rect2 = text_surface2.get_rect(center=(450, 400))
-            self.screen.blit(text_surface1, text_rect1)
-            self.screen.blit(text_surface2, text_rect2)
-            pygame.display.flip()
-            self.clock.tick(6000)
-
-        if self.game_over:
-            print("Score : " + str(self.score))
-            print("Line : " + str(self.line))
-            pygame.display.flip()
-            self.clock.tick(6000)
+            clock.tick(time)
+        print(self.score)
 
 
 # メイン関数
@@ -472,3 +763,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+        
+
