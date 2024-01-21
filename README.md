@@ -50,3 +50,9 @@ AIの実装<br>
 ・ニューラルネットワークと遺伝的アルゴリズムで学習させる<br>
 ニューラルネットワークの説明　：　https://zenn.dev/nekoallergy/articles/ml-basic-nn01<br>
 ニューラルネットワークの実装参考　：　https://atmarkit.itmedia.co.jp/ait/articles/2202/09/news027.html<br>
+<br>
+ニューラルネットワークの実装が完了<br>
+遺伝的アルゴリズムで用いる遺伝子の値を明確化した<br>
+・パラメータを適当にいじって出力をしてみたが、まったくできている感じがなかったので修正の必要がある可能性あり<br>
+・ここからは遺伝的アルゴリズムの実装を行う<br>
+遺伝的アルゴリズム実装参考　：　https://qiita.com/ksk001100/items/0f527a72270430017d8d<br>
