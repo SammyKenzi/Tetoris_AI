@@ -48,5 +48,5 @@ AIがプレイするための機能はすべて実装できた<br>
 ------------------------------------------------------------------------------------
 AIの実装<br>
 ・ニューラルネットワークと遺伝的アルゴリズムで学習させる<br>
-ニューラルネットワークの説明　：　https://zenn.dev/nekoallergy/articles/ml-basic-nn01　<br>
-ニューラルネットワークの実装参考　：　https://atmarkit.itmedia.co.jp/ait/articles/2202/09/news027.html　<br>
+ニューラルネットワークの説明　：　https://zenn.dev/nekoallergy/articles/ml-basic-nn01<br>
+ニューラルネットワークの実装参考　：　https://atmarkit.itmedia.co.jp/ait/articles/2202/09/news027.html<br>
