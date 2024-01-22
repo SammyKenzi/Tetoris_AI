@@ -265,7 +265,7 @@ class Tetris():
                 target = self.Field[i + self.y + self.Field_top -1][j + self.x + self.Field_wall]
                 if target == self.block[self.next[0]][self.dir][i][j]:
                     self.Field[i + self.y + self.Field_top -1][j + self.x + self.Field_wall] = 0
-        if self.MoveCheck(move, pwr, self.x, self.y, self.next[0]):
+        if self.MoveCheck(move, pwr, self.x, self.y, self.dir):
             if move == 0:
                 self.y += -pwr
             elif move == 1:
@@ -307,7 +307,7 @@ class Tetris():
     #Ghost表示
     def ghost(self):
         self.ghostY = 0
-        while(self.MoveCheck(2,1,self.x, self.y, self.next[0], 0,self.ghostY)):
+        while(self.MoveCheck(2,1,self.x, self.y, self.dir, 0,self.ghostY)):
             self.ghostY += 1
         return self.ghostY + self.y
 
@@ -320,7 +320,7 @@ class Tetris():
         self.draw()
     
     #衝突判定
-    def MoveCheck(self, direction, power, self_x, self_y, mino, srsx=0, srsy=0):
+    def MoveCheck(self, direction, power, self_x, self_y, dir, srsx=0, srsy=0):
         diry = 0
         dirx = 0
         checked = [False, False, False, False]
@@ -338,7 +338,7 @@ class Tetris():
                 elif direction == 3:
                     diry = j
                     dirx = i
-                if self.block[mino][self.dir][diry][dirx] != 0:
+                if self.block[self.next[0]][dir][diry][dirx] != 0:
                     if direction == 0:
                         if self.Field[diry + self_y - power + self.Field_top - 1 + srsy][dirx + self_x + self.Field_wall + srsx] != 0 and checked[j] != True:
                             return False
@@ -740,7 +740,7 @@ class Tetris():
                         self.rotate_block(0)
                     elif event.key == pygame.K_w:
                         #ハードドロップ
-                        while(self.MoveCheck(2,1,self.x, self.y, self.next[0])):
+                        while(self.MoveCheck(2,1,self.x, self.y, self.dir)):
                             self.minoMoving(2,1)
                             self.score += 2
                         self.minoMoving(2,1)

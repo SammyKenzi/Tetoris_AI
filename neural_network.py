@@ -239,6 +239,8 @@ class Neural_Network(Tetris):
         self.BackToBack = False
         self.ren = 0
         self.message = ""
+        self.best_put = [0,0]
+        self.ai_speed = 50
         #ニューラルネットワークの層
         self.layers = [
             2, #入力層の数
@@ -272,7 +274,7 @@ class Neural_Network(Tetris):
         self.x = self.initial_x
         self.y = self.initial_y
         self.dir = 0
-        self.learn()
+        self.best_put = self.learn()
         if self.DuplicateCheck() == False:
             self.game_over = True
         self.useHold = False
@@ -288,6 +290,7 @@ class Neural_Network(Tetris):
         v_y = self.y # 仮想の座標
         info = []
         for a in range(4):
+            count = 0
             v_field = [[8,8, 0,0,0,0,0,0,0,0,0,0, 8,8],
                         [8,8, 0,0,0,0,0,0,0,0,0,0, 8,8],
                         [8,8, 0,0,0,0,0,0,0,0,0,0, 8,8],
@@ -313,33 +316,67 @@ class Neural_Network(Tetris):
                         [8,8, 8,8,8,8,8,8,8,8,8,8, 8,8],
                         [8,8, 8,8,8,8,8,8,8,8,8,8, 8,8]
                         ]
-            for i in range (24):
-                for j in range (14):
-                    v_field[i][j] = self.Field[i][j]
-            while(self.MoveCheck(3, 1, v_x, v_y, self.next[0])):
-                v_x -= 1
             
-            while(self.MoveCheck(2, 1, v_x, v_y, self.next[0])):
+            v_x = 3
+            # v_x 初期値
+            while(self.MoveCheck(2, 1, v_x, v_y, a)):
                 v_y += 1
             for j in range(4):
                 for k in range(4):
                     if self.block[self.next[0]][a][j][k] != 0:
                         v_field[j + v_y + self.Field_top -2][k + v_x + self.Field_wall] = self.next[0]
+            v_y = 0
             # 外部情報を具体的に計算
-            info.append(self.cal_input(v_field))
+            info.append([self.cal_input(v_field), a, count])
+
+            # v_x 左方向
+            while(self.MoveCheck(3, 1, v_x, v_y, a)):
+                v_x -= 1
+                count -= 1
+                for i in range (24):
+                    for j in range (14):
+                        v_field[i][j] = self.Field[i][j]
+                while(self.MoveCheck(2, 1, v_x, v_y, a)):
+                    v_y += 1
+                for j in range(4):
+                    for k in range(4):
+                        if self.block[self.next[0]][a][j][k] != 0:
+                            v_field[j + v_y + self.Field_top -2][k + v_x + self.Field_wall] = self.next[0]
+                v_y = 0
+                # 外部情報を具体的に計算
+                info.append([self.cal_input(v_field), a, count])
+            
+            # v_x 右方向
+            v_x = 3
+            count = 0
+            while(self.MoveCheck(1, 1, v_x, v_y, a)):
+                v_x += 1
+                count += 1
+                for i in range (24):
+                    for j in range (14):
+                        v_field[i][j] = self.Field[i][j]
+                while(self.MoveCheck(2, 1, v_x, v_y, a)):
+                    v_y += 1
+                for j in range(4):
+                    for k in range(4):
+                        if self.block[self.next[0]][a][j][k] != 0:
+                            v_field[j + v_y + self.Field_top -2][k + v_x + self.Field_wall] = self.next[0]
+                v_y = 0
+                # 外部情報を具体的に計算
+                info.append([self.cal_input(v_field), a, count])
         return info
 
         
     # 外部情報を具体的に計算（1次元配列で返す
-    # [低さ、　消せるライン数]
+    # [高さ、　消せるライン数]
     def cal_input(self, field):
-        #低さ（低いほうがいい）
+        #高さ
         x = []
         for i in range(24):
             flag = False
             for j in range(2,12):
                 if field[i][j] != 0:
-                    x.append(i)
+                    x.append(-i)
                     flag = True
                     break
             if flag:
@@ -358,7 +395,37 @@ class Neural_Network(Tetris):
         x.append(line)
         return x
     
-    # 出力層の値の最大値とその時の情報を返す関数[最大値, 外部情報の何番目か]
+    def play_ai(self):
+        move_count = 0
+        while self.dir != self.best_put[0]:
+                if self.best_put[0] == 1:
+                    pygame.time.wait(self.ai_speed)
+                    self.rotate_block(1)
+                elif self.best_put[0] == 2:
+                    pygame.time.wait(self.ai_speed)
+                    self.rotate_block(1)
+                    pygame.time.wait(self.ai_speed)
+                    self.rotate_block(1)
+                elif self.best_put[0] == 3:
+                    pygame.time.wait(self.ai_speed)
+                    self.rotate_block(0) 
+        while move_count != self.best_put[1]:
+            if self.best_put[1] > 0:
+                pygame.time.wait(self.ai_speed)
+                self.minoMoving(1,1)
+                move_count += 1
+            else:
+                pygame.time.wait(self.ai_speed)
+                self.minoMoving(3,1)
+                move_count -= 1
+        pygame.time.wait(self.ai_speed)
+        while(self.MoveCheck(2,1,self.x, self.y, self.dir)):
+            self.minoMoving(2,1)
+            self.score += 2
+        self.minoMoving(2,1)
+        self.score += 2
+    
+    # 出力層の値の最大値とその時の情報を返す関数[dir, 座標]
     def learn(self):
         # 外部情報のlist x(2次元)　を取得
         x = self.next_can_put()
@@ -367,73 +434,88 @@ class Neural_Network(Tetris):
             # 入力層→中間層
             middle_x = []
             for i in range(self.layers[1]):
-                middle_x.append(self.summation(x[k], self.weights[0][i], self.biases[0][i]))
+                middle_x.append(self.summation(x[k][0], self.weights[0][i], self.biases[0][i]))
             # 中間層→出力層
-            output.append(self.summation(middle_x, self.weights[1][0], self.biases[1][0]))
-        max_value = max(output)
-        return [max_value, output.index(max_value)]
+            output.append([self.summation(middle_x, self.weights[1][0], self.biases[1][0]), x[k][1], x[k][2]])
+        max_index = numpy.argmax(numpy.array(output), axis=0).tolist()
+        return [output[max_index[0]][1], output[max_index[0]][2]]
     
-    def run(self):
+    def run(self, p1, p2, roop):
+        
         pygame.init()
         pygame.display.set_caption("AI")
         clock = pygame.time.Clock()
         time = 1000
         self.count = 0
         
+        
+        for i in range(roop):
+            self.game_over = False
+            self.weights = p1
+            self.biases = p2
+            while self.game_over == False:
+                self.count += 1/time
+                self.screen.fill((0,0,0))
+                self.nextDecide()
+                self.next_draw()
+                self.hold_draw()
+                self.minoDrawing(self.next[0], self.dir)
+                pygame.display.update()
+                if(self.count >= 0.5):
+                    self.free_fall()
+                    self.count = 0
 
-        while self.game_over == False:
-            self.count += 1/time
-            self.screen.fill((0,0,0))
-            self.nextDecide()
-            self.next_draw()
-            self.hold_draw()
-            self.minoDrawing(self.next[0], self.dir)
-            pygame.display.update()
-            if(self.count >= 0.5):
-                self.free_fall()
-                self.count = 0
-
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.game_over = True
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_a:
-                        self.minoMoving(3,1)
-                    elif event.key == pygame.K_d:
-                        self.minoMoving(1,1)
-                    elif event.key == pygame.K_s:
-                        self.minoMoving(2,1)
-                    elif event.key == pygame.K_SPACE:
-                        if self.useHold == False:
-                            self.hold_control()
-                        self.score += 2
-                    elif event.key == pygame.K_RIGHT:  # 「→」ボタンを時計回りの回転操作に割り当てる例
-                        self.rotate_block(1)
-                    elif event.key == pygame.K_LEFT:  # 「←」ボタンを反時計回りの回転操作に割り当てる例
-                        self.rotate_block(0)
-                    elif event.key == pygame.K_w:
-                        #ハードドロップ
-                        while(self.MoveCheck(2,1,self.x, self.y, self.next[0])):
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        self.game_over = True
+                    if event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_a:
+                            self.minoMoving(3,1)
+                        elif event.key == pygame.K_d:
+                            self.minoMoving(1,1)
+                        elif event.key == pygame.K_s:
+                            self.minoMoving(2,1)
+                        elif event.key == pygame.K_SPACE:
+                            if self.useHold == False:
+                                self.hold_control()
+                            self.score += 2
+                        elif event.key == pygame.K_RIGHT:  # 「→」ボタンを時計回りの回転操作に割り当てる例
+                            self.rotate_block(1)
+                        elif event.key == pygame.K_LEFT:  # 「←」ボタンを反時計回りの回転操作に割り当てる例
+                            self.rotate_block(0)
+                        elif event.key == pygame.K_w:
+                            #ハードドロップ
+                            while(self.MoveCheck(2,1,self.x, self.y, self.dir)):
+                                self.minoMoving(2,1)
+                                self.score += 2
                             self.minoMoving(2,1)
                             self.score += 2
-                        self.minoMoving(2,1)
-                        self.score += 2
 
+                # Played by AI
+                self.play_ai()
 
-            for event in pygame.event.get():
-                if event.type == QUIT:
-                    pygame.quit()
-                    sys.exit()
-            
-            clock.tick(time)
-        print(self.score)
+                for event in pygame.event.get():
+                    if event.type == QUIT:
+                        pygame.quit()
+                        sys.exit()
+                
+                clock.tick(time)
+            print(self.score)
+            self.__init__()
+        return self.score
 
     
 
 # メイン関数
 def main():
     neural = Neural_Network()
-    neural.run()
+    neural.run([[[-5.0, 1], [-5.0, 2.0], [-5.0, 3.0]], # 入力層→中間層1　入力層→中間層2　入力層→中間層3
+            [[1.0, 2.0, 3.0]]],[
+            [5.0, 5.5, 5.0], # 中間層のバイアス
+            [0.5] # 出力層のバイアス
+        ], 3)
+    print(1)
+    
 
 if __name__ == "__main__":
     main()
