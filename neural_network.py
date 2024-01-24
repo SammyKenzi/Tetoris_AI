@@ -240,10 +240,10 @@ class Neural_Network(Tetris):
         self.ren = 0
         self.message = ""
         self.best_put = [0,0]
-        self.ai_speed = 50
+        self.ai_speed = 10
         #ニューラルネットワークの層
         self.layers = [
-            2, #入力層の数
+            4, #入力層の数
             3, #中間層の数
             1] #出力層の数
         
@@ -368,7 +368,7 @@ class Neural_Network(Tetris):
 
         
     # 外部情報を具体的に計算（1次元配列で返す
-    # [高さ、　消せるライン数]
+    # [高さ、　消せるライン数, 穴の数、穴の上の数]
     def cal_input(self, field):
         #高さ
         x = []
@@ -376,7 +376,7 @@ class Neural_Network(Tetris):
             flag = False
             for j in range(2,12):
                 if field[i][j] != 0:
-                    x.append(-i)
+                    x.append(i)
                     flag = True
                     break
             if flag:
@@ -393,6 +393,28 @@ class Neural_Network(Tetris):
             if flag:
                 line += 1
         x.append(line)
+        
+        # 穴の数
+        count = 0
+        for i in range(22):
+            for j in range(2,12):
+                if field[i][j] != 0:
+                    a = 1
+                    while field[i+a][j] == 0:
+                        count += 1
+                        a += 1
+        x.append(-count)
+        # 穴の上の数
+        count = 0
+        for i in range(22):
+            for j in range(2,12):
+                if field[i][j] != 0 and field[i+1][j] == 0:
+                    a = 1
+                    while field[i-a][j] != 0:
+                        count += 1
+                        a -= 1
+        x.append(-count)
+        
         return x
     
     def play_ai(self):
@@ -440,82 +462,82 @@ class Neural_Network(Tetris):
         max_index = numpy.argmax(numpy.array(output), axis=0).tolist()
         return [output[max_index[0]][1], output[max_index[0]][2]]
     
-    def run(self, p1, p2, roop):
-        
+    def run(self, p1, p2):
         pygame.init()
         pygame.display.set_caption("AI")
         clock = pygame.time.Clock()
         time = 1000
         self.count = 0
-        
-        
-        for i in range(roop):
-            self.game_over = False
-            self.weights = p1
-            self.biases = p2
-            while self.game_over == False:
-                self.count += 1/time
-                self.screen.fill((0,0,0))
-                self.nextDecide()
-                self.next_draw()
-                self.hold_draw()
-                self.minoDrawing(self.next[0], self.dir)
-                pygame.display.update()
-                if(self.count >= 0.5):
-                    self.free_fall()
-                    self.count = 0
+        self.weights = p1
+        self.biases = p2
 
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        self.game_over = True
-                    if event.type == pygame.KEYDOWN:
-                        if event.key == pygame.K_a:
-                            self.minoMoving(3,1)
-                        elif event.key == pygame.K_d:
-                            self.minoMoving(1,1)
-                        elif event.key == pygame.K_s:
-                            self.minoMoving(2,1)
-                        elif event.key == pygame.K_SPACE:
-                            if self.useHold == False:
-                                self.hold_control()
-                            self.score += 2
-                        elif event.key == pygame.K_RIGHT:  # 「→」ボタンを時計回りの回転操作に割り当てる例
-                            self.rotate_block(1)
-                        elif event.key == pygame.K_LEFT:  # 「←」ボタンを反時計回りの回転操作に割り当てる例
-                            self.rotate_block(0)
-                        elif event.key == pygame.K_w:
-                            #ハードドロップ
-                            while(self.MoveCheck(2,1,self.x, self.y, self.dir)):
-                                self.minoMoving(2,1)
-                                self.score += 2
+        while self.game_over == False:
+            self.count += 1/time
+            self.screen.fill((0,0,0))
+            self.nextDecide()
+            self.next_draw()
+            self.hold_draw()
+            self.minoDrawing(self.next[0], self.dir)
+            pygame.display.update()
+            if(self.count >= 0.5):
+                self.free_fall()
+                self.count = 0
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.game_over = True
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_a:
+                        self.minoMoving(3,1)
+                    elif event.key == pygame.K_d:
+                        self.minoMoving(1,1)
+                    elif event.key == pygame.K_s:
+                        self.minoMoving(2,1)
+                    elif event.key == pygame.K_SPACE:
+                        if self.useHold == False:
+                            self.hold_control()
+                        self.score += 2
+                    elif event.key == pygame.K_RIGHT:  # 「→」ボタンを時計回りの回転操作に割り当てる例
+                        self.rotate_block(1)
+                    elif event.key == pygame.K_LEFT:  # 「←」ボタンを反時計回りの回転操作に割り当てる例
+                        self.rotate_block(0)
+                    elif event.key == pygame.K_w:
+                        #ハードドロップ
+                        while(self.MoveCheck(2,1,self.x, self.y, self.dir)):
                             self.minoMoving(2,1)
                             self.score += 2
+                        self.minoMoving(2,1)
+                        self.score += 2
 
-                # Played by AI
-                self.play_ai()
+            # Played by AI
+            self.play_ai()
 
-                for event in pygame.event.get():
-                    if event.type == QUIT:
-                        pygame.quit()
-                        sys.exit()
-                
-                clock.tick(time)
-            print(self.score)
-            self.__init__()
+            for event in pygame.event.get():
+                if event.type == QUIT:
+                    pygame.quit()
+                    sys.exit()
+            
+            clock.tick(time)
+        print(self.score)
         return self.score
 
-    
 
+neural = Neural_Network()
+def a():
+    neural.run([[[-5.0, 1], [-5.0, 2.0], [-5.0, 3.0]], # 入力層→中間層1　入力層→中間層2　入力層→中間層3
+                [[1.0, 2.0, 3.0]]],[
+                [5.0, 5.5, 5.0], # 中間層のバイアス
+                [0.5] # 出力層のバイアス
+            ])
 # メイン関数
 def main():
-    neural = Neural_Network()
-    neural.run([[[-5.0, 1], [-5.0, 2.0], [-5.0, 3.0]], # 入力層→中間層1　入力層→中間層2　入力層→中間層3
-            [[1.0, 2.0, 3.0]]],[
-            [5.0, 5.5, 5.0], # 中間層のバイアス
-            [0.5] # 出力層のバイアス
-        ], 3)
-    print(1)
-    
+    for i in range(2):
+        neural = Neural_Network()
+        neural.run([[[-5.0, 1], [-5.0, 2.0], [-5.0, 3.0]], # 入力層→中間層1　入力層→中間層2　入力層→中間層3
+                [[1.0, 2.0, 3.0]]],[
+                [5.0, 5.5, 5.0], # 中間層のバイアス
+                [0.5] # 出力層のバイアス
+            ])
 
 if __name__ == "__main__":
     main()
