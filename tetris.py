@@ -265,7 +265,7 @@ class Tetris():
                 target = self.Field[i + self.y + self.Field_top -1][j + self.x + self.Field_wall]
                 if target == self.block[self.next[0]][self.dir][i][j]:
                     self.Field[i + self.y + self.Field_top -1][j + self.x + self.Field_wall] = 0
-        if self.MoveCheck(move, pwr, self.x, self.y, self.dir):
+        if self.MoveCheck(move, pwr, self.x, self.y, self.dir,self.Field):
             if move == 0:
                 self.y += -pwr
             elif move == 1:
@@ -307,7 +307,7 @@ class Tetris():
     #Ghost表示
     def ghost(self):
         self.ghostY = 0
-        while(self.MoveCheck(2,1,self.x, self.y, self.dir, 0,self.ghostY)):
+        while(self.MoveCheck(2,1,self.x, self.y, self.dir, self.Field, 0,self.ghostY)):
             self.ghostY += 1
         return self.ghostY + self.y
 
@@ -320,7 +320,7 @@ class Tetris():
         self.draw()
     
     #衝突判定
-    def MoveCheck(self, direction, power, self_x, self_y, dir, srsx=0, srsy=0):
+    def MoveCheck(self, direction, power, self_x, self_y, dir, field, srsx=0, srsy=0 ):
         diry = 0
         dirx = 0
         checked = [False, False, False, False]
@@ -340,16 +340,16 @@ class Tetris():
                     dirx = i
                 if self.block[self.next[0]][dir][diry][dirx] != 0:
                     if direction == 0:
-                        if self.Field[diry + self_y - power + self.Field_top - 1 + srsy][dirx + self_x + self.Field_wall + srsx] != 0 and checked[j] != True:
+                        if field[diry + self_y - power + self.Field_top - 1 + srsy][dirx + self_x + self.Field_wall + srsx] != 0 and checked[j] != True:
                             return False
                     elif direction == 1:
-                        if self.Field[diry + self_y + self.Field_top - 1 + srsy][dirx + self_x + power + self.Field_wall + srsx] != 0 and checked[j] != True:
+                        if field[diry + self_y + self.Field_top - 1 + srsy][dirx + self_x + power + self.Field_wall + srsx] != 0 and checked[j] != True:
                             return False
                     elif direction == 2:
-                        if self.Field[diry + self_y + power + self.Field_top - 1 + srsy][dirx + self_x + self.Field_wall + srsx] != 0 and checked[j] != True:
+                        if field[diry + self_y + power + self.Field_top - 1 + srsy][dirx + self_x + self.Field_wall + srsx] != 0 and checked[j] != True:
                             return False
                     elif direction == 3:
-                        if self.Field[diry + self_y + self.Field_top - 1 + srsy][dirx + self_x - power + self.Field_wall + srsx] != 0 and checked[j] != True:
+                        if field[diry + self_y + self.Field_top - 1 + srsy][dirx + self_x - power + self.Field_wall + srsx] != 0 and checked[j] != True:
                             return False
                     checked[j] = True
         return True
@@ -358,7 +358,7 @@ class Tetris():
     def minoDrop(self):
         self.minoDrawing(self.next[0], self.dir)
         self.nextTONext()
-        line = self.minoDelete()
+        line = self.minoDelete(self.Field)
         self.score_cal(line)
         self.x = self.initial_x
         self.y = self.initial_y
@@ -435,31 +435,41 @@ class Tetris():
         self.minoDrawing(self.next[0], self.dir)
     
     #ライン消去
-    def minoDelete(self):
+    def minoDelete(self, field):
         delete_line = 0
+        v_delete_line = 0
         for i in range(20):
             flag = False
             for j in range(10):
-                if self.Field[i + self.Field_top][j + self.Field_wall] == 0:
+                if field[i + self.Field_top][j + self.Field_wall] == 0:
                     break
                 if j == self.Field_width - 1:
                     flag = True
             if flag:
                 for j in reversed(range(self.Field_top+1, i + self.Field_top + 1)):
                     for k in range(self.Field_width):
-                        self.Field[j][k + self.Field_wall] = self.Field[j-1][k + self.Field_wall]
-                        self.Field[j-1][k + self.Field_wall] = 0
-                self.line += 1
-                delete_line += 1
-        return delete_line
+                        field[j][k + self.Field_wall] = field[j-1][k + self.Field_wall]
+                        field[j-1][k + self.Field_wall] = 0
+                if field == self.Field:
+                    self.line += 1
+                    delete_line += 1
+                else:
+                    v_delete_line += 1
+        if field == self.Field:
+            self.score += delete_line * delete_line
+            return delete_line
+        else:
+            return v_delete_line
+        
                 
     #ブロック重複チェック
     def DuplicateCheck(self, srsy = 0, srsx = 0):
+        flag = True
         for i in range(4):
             for j in range(4):
                 if self.Field[i + self.y + self.Field_top - 1 + srsy][j + self.x + self.Field_wall + srsx] != 0 and self.block[self.next[0]][self.dir][i][j] != 0:
-                    return False
-        return True
+                    flag = False
+        return flag
 
     #スーパーローテーション
     def SuperRotation(self, dirOld):
@@ -740,7 +750,7 @@ class Tetris():
                         self.rotate_block(0)
                     elif event.key == pygame.K_w:
                         #ハードドロップ
-                        while(self.MoveCheck(2,1,self.x, self.y, self.dir)):
+                        while(self.MoveCheck(2,1,self.x, self.y, self.dir, self.Field)):
                             self.minoMoving(2,1)
                             self.score += 2
                         self.minoMoving(2,1)
