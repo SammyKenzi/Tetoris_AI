@@ -234,6 +234,7 @@ class Neural_Network(Tetris):
         self.ghostY = 0
         self.count = 0
         self.game_over = False
+        self.game_clear = False
         self.useTspin = False
         self.useTspinMini = False
         self.BackToBack = False
@@ -265,7 +266,6 @@ class Neural_Network(Tetris):
             if numpy.isnan(x_i):
                 x_i = 0.0
             neural_sum += int(x_i) * w_i
-        neural_sum += bias
         return neural_sum
     
     # Relu関数(Output Layer)
@@ -387,7 +387,7 @@ class Neural_Network(Tetris):
                 v_y2 = 0
                 self.v_delete_line = f + self.minoDelete(v_field2)
                 # 外部情報を具体的に計算
-                info.append([self.cal_input(v_field2, self.Field), a, count])
+                info.append([self.cal_input(v_field2, self.Field, self.v_delete_line), a, count])
 
                 # v_x2 左方向
                 while(self.MoveCheck(3, 1, v_x2, v_y2, d, v_field)):
@@ -405,7 +405,7 @@ class Neural_Network(Tetris):
                     v_y2 = 0
                     self.v_delete_line = f + self.minoDelete(v_field2)
                     # 外部情報を具体的に計算
-                    info.append([self.cal_input(v_field2, self.Field), a, count])
+                    info.append([self.cal_input(v_field2, self.Field, self.v_delete_line), a, count])
             
                 # v_x2 右方向
                 v_x2 = 3
@@ -425,7 +425,7 @@ class Neural_Network(Tetris):
                     v_y2 = 0
                     self.v_delete_line = f + self.minoDelete(v_field2)
                     # 外部情報を具体的に計算
-                    info.append([self.cal_input(v_field2, self.Field), a, count])
+                    info.append([self.cal_input(v_field2, self.Field, self.v_delete_line), a, count])
             ########################################################
 
             # v_x 左方向
@@ -489,7 +489,7 @@ class Neural_Network(Tetris):
                     v_y2 = 0
                     self.v_delete_line = f + self.minoDelete(v_field2)
                     # 外部情報を具体的に計算
-                    info.append([self.cal_input(v_field2, self.Field), a, count])
+                    info.append([self.cal_input(v_field2, self.Field, self.v_delete_line), a, count])
                     
                     # v_x2 左方向
                     while(self.MoveCheck(3, 1, v_x2, v_y2, d, v_field)):
@@ -507,7 +507,7 @@ class Neural_Network(Tetris):
                         v_y2 = 0
                         self.v_delete_line = f + self.minoDelete(v_field2)
                         # 外部情報を具体的に計算
-                        info.append([self.cal_input(v_field2, self.Field), a, count])
+                        info.append([self.cal_input(v_field2, self.Field, self.v_delete_line), a, count])
                 
                     # v_x2 右方向
                     v_x2 = 3
@@ -526,7 +526,7 @@ class Neural_Network(Tetris):
                         v_y2 = 0
                         self.v_delete_line = f + self.minoDelete(v_field2)
                         # 外部情報を具体的に計算
-                        info.append([self.cal_input(v_field2, self.Field), a, count])
+                        info.append([self.cal_input(v_field2, self.Field, self.v_delete_line), a, count])
                 ########################################################
             # v_x 右方向
             v_x = 3
@@ -592,7 +592,7 @@ class Neural_Network(Tetris):
                     v_y2 = 0
                     self.v_delete_line = f + self.minoDelete(v_field2)
                     # 外部情報を具体的に計算
-                    info.append([self.cal_input(v_field2, self.Field), a, count])
+                    info.append([self.cal_input(v_field2, self.Field, self.v_delete_line), a, count])
 
                     # v_x2 左方向
                     while(self.MoveCheck(3, 1, v_x2, v_y2, d, v_field)):
@@ -610,7 +610,7 @@ class Neural_Network(Tetris):
                         v_y2 = 0
                         self.v_delete_line = f + self.minoDelete(v_field2)
                         # 外部情報を具体的に計算
-                        info.append([self.cal_input(v_field2, self.Field), a, count])
+                        info.append([self.cal_input(v_field2, self.Field, self.v_delete_line), a, count])
                 
                     # v_x2 右方向
                     v_x2 = 3
@@ -629,14 +629,14 @@ class Neural_Network(Tetris):
                         v_y2 = 0
                         self.v_delete_line = f + self.minoDelete(v_field2)
                         # 外部情報を具体的に計算
-                        info.append([self.cal_input(v_field2, self.Field), a, count])
+                        info.append([self.cal_input(v_field2, self.Field, self.v_delete_line), a, count])
                 ########################################################
         return info
 
         
     # 外部情報を具体的に計算（1次元配列で返す
     # [高さ、　消せるライン数, 穴の数、穴の上の数]
-    def cal_input(self, field, before_field):
+    def cal_input(self, field, before_field,line):
         x = []
         #高さ        
         for i in range(24):
@@ -650,7 +650,7 @@ class Neural_Network(Tetris):
                 break
           
         #消せるライン数
-        x.append(self.v_delete_line*self.v_delete_line)
+        x.append(line*line*2)
         '''
         # 穴の数(完全)
         count = 0
@@ -676,12 +676,15 @@ class Neural_Network(Tetris):
         # 穴の上の数(最高地点のみ)
         sum = 0
         top = []
+        top_sum = 0
         for i in range(2,12):
             flag = False
             count = 0
             count_top = 0
             for j in range(22):
                 if field[j][i] != 0:
+                    if flag == False:
+                        top_sum += j
                     flag = True
                     
                 if flag:
@@ -696,6 +699,7 @@ class Neural_Network(Tetris):
             if top[i][1] == numpy.min(top, axis=0)[1]:
                 new_top.append(top[i][0])
         x.append(-sum)
+        x.append(top_sum*0.1)
         if new_top == []:
             x.append(0)
         else:
@@ -747,8 +751,8 @@ class Neural_Network(Tetris):
                     break
             sa2 += abs(mid - left)
             
-        x.append(sa2-sa1)
-        x.append((sa2-sa1)*(sa2-sa1))
+        x.append((sa2-sa1)*2)
+        x.append((sa2-sa1)*(sa2-sa1)*2)
         
         '''
         # 一マス空いた行
@@ -781,26 +785,19 @@ class Neural_Network(Tetris):
         move_count = 0
         if self.dir != self.best_put[0]:
                 if self.best_put[0] == 1:
-                    pygame.time.wait(self.ai_speed)
                     self.rotate_block(1)
                 elif self.best_put[0] == 2:
-                    pygame.time.wait(self.ai_speed)
                     self.rotate_block(1)
-                    pygame.time.wait(self.ai_speed)
                     self.rotate_block(1)
                 elif self.best_put[0] == 3:
-                    pygame.time.wait(self.ai_speed)
                     self.rotate_block(0)
         while move_count != self.best_put[1]:
             if self.best_put[1] > 0:
-                pygame.time.wait(self.ai_speed)
                 self.minoMoving(1,1)
                 move_count += 1
             else:
-                pygame.time.wait(self.ai_speed)
                 self.minoMoving(3,1)
                 move_count -= 1
-        pygame.time.wait(self.ai_speed)
         while(self.MoveCheck(2,1,self.x, self.y, self.dir, self.Field)):
             self.minoMoving(2,1)
             #self.score += 2
@@ -832,7 +829,9 @@ class Neural_Network(Tetris):
         self.weights = p1
         self.biases = p2
 
-        while self.game_over == False:
+        while self.game_over == False and self.game_clear == False:
+            if self.line >= 40:
+                self.game_clear = True
             self.count += 1/time
             self.screen.fill((0,0,0))
             self.nextDecide()
@@ -840,9 +839,6 @@ class Neural_Network(Tetris):
             self.hold_draw()
             self.minoDrawing(self.next[0], self.dir)
             pygame.display.update()
-            if(self.count >= 0.5):
-                self.free_fall()
-                self.count = 0
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -879,6 +875,8 @@ class Neural_Network(Tetris):
                     sys.exit()
             
             clock.tick(time)
+        if self.game_over:
+            self.score = -1000
         print(self.score)
         return self.score
 

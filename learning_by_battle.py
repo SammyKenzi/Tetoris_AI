@@ -1,16 +1,16 @@
 import random
 import numpy
 import copy
-from neural_network import Neural_Network
+from battle import Battle
 
 # パラメータ
-neural = Neural_Network()
+neural = Battle()
 gene_length = neural.layers[0]*neural.layers[1] + neural.layers[1] + neural.layers[1] + neural.layers[2] # 遺伝子長
 individual_length = 10 # 個体数
 generation = 50 # 世代数
 mutate_rate = 0.1 # 突然変異の確率
 eliter_rate = 0.2 # エリート選択の割合
-neural = Neural_Network()
+neural = Battle()
 
 
 # 第1世代の個体群を生成　個体は以下のようにあらわす
@@ -85,7 +85,7 @@ def ranking_chice(fitness):
 def try_average(para1,para2):
     sum = 0
     for i in range(3):
-        neural = Neural_Network()
+        neural = Battle()
         sum += neural.run(para1, para2)
     return sum/3
 
@@ -93,7 +93,7 @@ def main():
     # 初期個体生成
     pop = []
     for i in range(individual_length):
-        neural = Neural_Network()
+        neural = Battle()
         pop.append([try_average(fitness(get_population()[i])[0], fitness(get_population()[i])[1]), get_population()[i]])
     pop = evaluate(pop)
     print('Generation : 0')
@@ -116,7 +116,7 @@ def main():
                 m1 = ranking_chice(eva)
                 m2 = ranking_chice(eva)
                 child = two_point_crossover(m1, m2)
-            neural = Neural_Network()
+            neural = Battle()
             pop.append([try_average(fitness(child)[0], fitness(child)[1]), child])
         
         # 評価
@@ -131,41 +131,4 @@ def main():
 
 if __name__ == '__main__':
     main()
-'''
-Generation : 2
--1000
--1000
-66
--1000
--1000
--1000
--1000
--1000
-55
-60
--1000
--1000
--1000
--1000
--1000
--1000
--1000
--1000
--1000
--1000
--1000
--1000
--1000
--1000
--1000
-60
--1000
--1000
--1000
--1000
--1000
--1000
-Min : -1000.0
-Max : -464.5
-Result : [-464.5, [0.8877267130049408, 0.04513974583728053, 0.45087311909200467, 0.7520762463175805, 0.472454159608377, 0.5791802583045745, 0.1727913042676691, 0.21753187549605169, 0.9511616884992243, 0.9924967021387068, 0.8217796304587063, 0.7183518849250142, 0.8667469135591556, 0.855668829932274, 0.5537085275017275, 0.31733647332632, 0.8114397087620755, 0.26668624394570983, 0.2386498756590133, 0.9634261031661933, 0.6978744025254705, 0.464717225026439, 0.842836649821497, 0.6279126459889504, 0.5602128753938861, 0.015590959790790504, 0.9611699248166082, 0.5812012245863031]]
-'''
+
