@@ -245,7 +245,7 @@ class Neural_Network(Tetris):
         self.v_delete_line = 0
         #ニューラルネットワークの層
         self.layers = [
-            12, #入力層の数
+            16, #入力層の数
             3, #中間層の数
             1] #出力層の数
         
@@ -882,14 +882,44 @@ class Neural_Network(Tetris):
         cavecave = cave_hole[0] * cave_hole[0]
         hole = cave_hole[1]
         holehole = cave_hole[1] * cave_hole[1]
-        x.append(-cave)
-        x.append(-cavecave)
+        x.append(-cave*0.1)
+        x.append(-cavecave*0.1)
         x.append(-hole)
         x.append(-holehole)
 
+        # 13: ライン消去 , 14: ライン消去2乗
+        x.append(line)
+        x.append(line*line)
+
+        # 15: 最大の溝の深さ（制限付きで深いほど高評価）(max_well) , 16: その他の溝の深さ（深いほど低評価）(sum(well_list))
+        well_list = [] # 列ごとの溝の深さ
+        for i in range(2,12):
+            well = 0
+            well_count =0
+            start_flag = False
+            for j in range(22):
+                if field[j][i] != 0:
+                    break
+                elif field[j][i] == 0 and field[j][i-1] != 0 and field[j][i+1] != 0:
+                    start_flag = True
+                    well_count += 1
+                    if field[j+1][i] != 0:
+                        well = well_count
+                else:
+                    if start_flag:
+                        break
+            well_list.append(well)
+
+        max_well = numpy.max(well_list)
+        if max_well <= 8:
+            x.append(max_well)
+        else:
+            x.append(8 - max_well)
+        max_well_index = well_list.index(max_well)
+        well_list[max_well_index] = 0
+        x.append(-sum(well_list))
 
         return x
-
 
 
     def play_ai(self):
@@ -911,9 +941,9 @@ class Neural_Network(Tetris):
                 move_count -= 1
         while(self.MoveCheck(2,1,self.x, self.y, self.dir, self.Field)):
             self.minoMoving(2,1)
-            #self.score += 2
+            self.score += 2
         self.minoMoving(2,1)
-        #self.score += 2
+        self.score += 2
     
     # 出力層の値の最大値とその時の情報を返す関数[dir, 座標]
     def learn(self):
@@ -941,8 +971,8 @@ class Neural_Network(Tetris):
         self.biases = p2
 
         while self.game_over == False and self.game_clear == False:
-            if self.line >= 40:
-                self.game_clear = True
+            #if self.line >= 40:
+            #    self.game_clear = True
             self.count += 1/time
             self.screen.fill((0,0,0))
             self.nextDecide()
@@ -986,8 +1016,8 @@ class Neural_Network(Tetris):
                     sys.exit()
             
             clock.tick(time)
-        if self.game_over:
-            self.score = -1000
+        #if self.game_over:
+        #    self.score = -100
         print(self.score)
         return self.score
 
