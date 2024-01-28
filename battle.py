@@ -293,7 +293,7 @@ class Battle(Neural_Network):
         self.best_put2 = [0,0]
         self.ai_speed2 = 0
         self.v_delete_line2 = 0
-        self.attacked1 = 0
+        self.attacked2 = 0
         #ニューラルネットワークの層
         self.layers = [
             7, #入力層の数
@@ -604,11 +604,26 @@ class Battle(Neural_Network):
                     v_delete_line += 1
         if field == self.Field2:
             self.score2 += delete_line * delete_line
-            self.attacked1 += delete_line
+            self.attacked += delete_line
             return delete_line
         else:
             return v_delete_line
 
+    def minoDrop(self):
+        self.minoDrawing(self.next[0], self.dir)
+        self.nextTONext()
+        line = self.minoDelete(self.Field)
+        self.score_cal(line)
+        self.x = self.initial_x
+        self.y = self.initial_y
+        self.dir = 0
+        self.do_attack(self.attacked2)
+        self.attacked2 = 0
+        self.best_put = self.learn()
+        if self.DuplicateCheck() == False:
+            self.game_over = True
+        self.useHold = False
+        self.count = 0        
     def minoDrop2(self):
         self.minoDrawing2(self.next2[0], self.dir2)
         self.nextTONext2()
@@ -617,8 +632,8 @@ class Battle(Neural_Network):
         self.x2 = self.initial_x2
         self.y2 = self.initial_y2
         self.dir2 = 0
-        self.do_attack(self.attacked1)
-        self.attacked1 = 0
+        self.do_attack2(self.attacked)
+        self.attacked = 0
         self.best_put2 = self.learn2()
         if self.DuplicateCheck2() == False:
             self.game_over2 = True
@@ -892,13 +907,30 @@ class Battle(Neural_Network):
 
     # 攻撃実行
     def do_attack(self, pwr):
-        for i in range(1,22):
+        flag = False
+        for i in range(3,22):
+            for j in range(2,12):
+                if i < 22-pwr:
+                    self.Field2[i][j] = self.Field2[i+pwr][j]
+                else:
+                    flag = True
+                    self.Field2[i][j] = 9
+            if flag:
+                x = random.randint(2,11)
+                self.Field2[i][x] = 0
+
+    def do_attack2(self, pwr):
+        flag = False
+        for i in range(3,22):
             for j in range(2,12):
                 if i < 22-pwr:
                     self.Field[i][j] = self.Field[i+pwr][j]
                 else:
+                    flag = True
                     self.Field[i][j] = 9
-                    self.Field[i][0] = 0
+            if flag:
+                x = random.randint(2,11)
+                self.Field[i][x] = 0
 
 
     def next_can_put2(self):

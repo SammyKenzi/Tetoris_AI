@@ -245,7 +245,7 @@ class Neural_Network(Tetris):
         self.v_delete_line = 0
         #ニューラルネットワークの層
         self.layers = [
-            7, #入力層の数
+            12, #入力層の数
             3, #中間層の数
             1] #出力層の数
         
@@ -636,6 +636,7 @@ class Neural_Network(Tetris):
         
     # 外部情報を具体的に計算（1次元配列で返す
     # [高さ、　消せるライン数, 穴の数、穴の上の数]
+    '''
     def cal_input(self, field, before_field,line):
         x = []
         #高さ        
@@ -651,7 +652,7 @@ class Neural_Network(Tetris):
           
         #消せるライン数
         x.append(line*line*2)
-        '''
+        
         # 穴の数(完全)
         count = 0
         for i in range(22):
@@ -660,7 +661,7 @@ class Neural_Network(Tetris):
                         count += 1
                     
         x.append(-count)
-        '''
+        
         # 穴の数（部分的）
         count = 0
         for i in range(2,12):
@@ -705,7 +706,7 @@ class Neural_Network(Tetris):
         else:
             x.append(-numpy.max(new_top))
 
-        '''
+        
         # 縦穴
         ## 4マス以上の縦穴が一つなら高評価、二つ以上あるなら低評価  
         count = 0
@@ -725,7 +726,7 @@ class Neural_Network(Tetris):
             x.append(0)
         else:
             x.append(0)
-        '''
+        
         
         # 凸凹度
         sa1 = 0
@@ -754,7 +755,7 @@ class Neural_Network(Tetris):
         x.append((sa2-sa1)*2)
         x.append((sa2-sa1)*(sa2-sa1)*2)
         
-        '''
+        
         # 一マス空いた行
         flag = True
         gyou = 0
@@ -778,9 +779,119 @@ class Neural_Network(Tetris):
                         count += 1
                     
         x.append(-count)
-        '''
+        
         return x
-    
+    '''
+    # Cold Clear を参考にした外部情報（評価値）
+    def cal_input(self, field, before_field, line):
+        x = []
+        # 1: 凸凹度(sa) , 2: 凸凹度の2乗(sasa) , 4: 最高地点の高さ(max_top)
+        top = [] # 各列の一番上のブロックの段数
+        for i in range(2,12):
+            j = 0
+            while field[j][i] == 0:
+                j += 1
+            top.append(j)
+        x.append(numpy.min(top))
+        sa = 0
+        sasa = 0
+        for i in range(9):
+            sa += abs(top[i] - top[i+1])
+            sasa += abs(top[i] - top[i+1]) * abs(top[i] - top[i+1])
+        x.append(-sa)
+        x.append(-sasa)
+
+        # 3: 各行ごとのブロックの遷移の合計 , 11: オーバーハング (※正確にはオーバーハングではない)(overhang) , 12: オーバーハングの二乗(overhangoverhang)
+        count = 0
+        overhang = 0
+        for i in range(0,22):
+            for j in range(2,11):
+                if field[i][j] != field[i][j+1]:
+                    count += 1
+                if field[i][j] != 0 and field[i+1][j] == 0:
+                    overhang += 1
+        x.append(-count)
+        x.append(-overhang)
+        overhangoverhang = overhang * overhang
+        x.append(-overhangoverhang)
+
+        # 5: 上半分の高さ(sum_top_half)
+        sum_top_half = 0 # 上半分の段数の和（小さいほど高評価）
+        for i in range(2,12):
+            j = 0
+            while field[j][i] == 0 and j <=10:
+                j += 1
+            sum_top_half += 11-j
+        x.append(-sum_top_half)
+
+        # 6: 上1/4の高さ(sum_top_quarter)
+        sum_top_quarter = 0 # 上半分の段数の和（小さいほど高評価）
+        for i in range(2,12):
+            j = 0
+            while field[j][i] == 0 and j <=5:
+                j += 1
+            sum_top_quarter += 6-j
+        x.append(-sum_top_quarter)
+
+        # 7: 穴の数(cave) , 8: 穴の数の二乗(cavecave) , 9: 穴のセル数(hole) , 10: 穴のセル数の二乗(holehole)
+        def count_cavities(board): #[cave, hole]
+            def dfs(x, y):
+                if 0 <= x < 14 and 0 <= y < 24 and not visited[y][x] and not board[y][x]:
+                    visited[y][x] = True
+                    for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                        nx, ny = x + dx, y + dy
+                        dfs(nx, ny)
+
+            def count_connected_zeros(x, y):
+                if not (0 <= x < 14 and 0 <= y < 24) or visited[y][x] or board[y][x] != 0:
+                    return 0
+                visited[y][x] = True
+                count = 1
+                count += count_connected_zeros(x + 1, y)
+                count += count_connected_zeros(x - 1, y)
+                count += count_connected_zeros(x, y + 1)
+                count += count_connected_zeros(x, y - 1)
+                return count
+            def count_connected_zeros_top(board):
+                    def dfs2(x, y):
+                        if not (0 <= x < 14 and 0 <= y < 24) or visited[y][x] or board[y][x] != 0:
+                            return 0
+                        visited[y][x] = True
+                        count = 1
+                        count += dfs2(x + 1, y)
+                        count += dfs2(x - 1, y)
+                        count += dfs2(x, y + 1)
+                        count += dfs2(x, y - 1)
+                        return count
+                    visited = [[False] * 14 for _ in range(24)]
+                    return dfs2(2, 0)
+            visited = [[False for _ in range(14)] for _ in range(24)]
+            cavity_count = 0
+            cell_count = 0
+
+            for y in range(24):
+                for x in range(14):
+                    if not visited[y][x] and not board[y][x]:
+                        cavity_count += 1
+                        cell_count += count_connected_zeros(x, y)
+                        dfs(x, y)
+
+            return cavity_count-1, cell_count-count_connected_zeros_top(board)
+        cave_hole = count_cavities(field)
+        cave = cave_hole[0]
+        cavecave = cave_hole[0] * cave_hole[0]
+        hole = cave_hole[1]
+        holehole = cave_hole[1] * cave_hole[1]
+        x.append(-cave)
+        x.append(-cavecave)
+        x.append(-hole)
+        x.append(-holehole)
+
+
+        return x
+
+
+
     def play_ai(self):
         move_count = 0
         if self.dir != self.best_put[0]:
