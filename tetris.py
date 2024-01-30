@@ -231,6 +231,7 @@ class Tetris():
         self.ghostY = 0
         self.count = 0
         self.game_over = False
+        self.game_clear = False
         self.useTspin = False
         self.useTspinMini = False
         self.BackToBack = False
@@ -456,7 +457,7 @@ class Tetris():
                 else:
                     v_delete_line += 1
         if field == self.Field:
-            self.score += delete_line * delete_line
+            self.score += delete_line * 1000
             return delete_line
         else:
             return v_delete_line
@@ -718,7 +719,11 @@ class Tetris():
         self.count = 0
         
 
-        while self.game_over == False:
+        while self.game_over == False and self.game_clear == False:
+            if self.line >= 4:
+                self.game_clear = True
+            if self.game_over:
+                self.score = -1000
             self.count += 1/time
             self.screen.fill((0,0,0))
             self.nextDecide()
@@ -763,6 +768,8 @@ class Tetris():
                     sys.exit()
             
             clock.tick(time)
+        if self.game_over:
+            self.score = -1000
         print(self.score)
 
 

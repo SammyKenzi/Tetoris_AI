@@ -6,12 +6,17 @@ import numpy
 import sys
 
 class Battle(Neural_Network):
-    def __init__(self):
+    def __init__(self, generation, AInum):
+
+        self.generation = generation
+        self.AInum = AInum[0]
+        self.AInum2 = AInum[1]
+
         self.Field_width = 10
         self.Field_hight = 20
         self.Field_wall = 2
         self.Field_top = 2
-        self.screen = pygame.display.set_mode((1800, 660))
+        self.screen = pygame.display.set_mode((1900, 660))
         self.block = [
             #null
             [[[0,0,0,0],
@@ -575,8 +580,7 @@ class Battle(Neural_Network):
                 else:
                     v_delete_line += 1
         if field == self.Field:
-            self.score += delete_line * delete_line
-            self.attacked2 += delete_line
+            self.attacked2 += delete_line*2
             return delete_line
         else:
             return v_delete_line
@@ -603,8 +607,7 @@ class Battle(Neural_Network):
                 else:
                     v_delete_line += 1
         if field == self.Field2:
-            self.score2 += delete_line * delete_line
-            self.attacked += delete_line
+            self.attacked += delete_line*2
             return delete_line
         else:
             return v_delete_line
@@ -795,16 +798,22 @@ class Battle(Neural_Network):
     #スコア表示
     def score_draw(self):
         font = pygame.font.Font(None,50)
-        text_score = font.render("Score : " + str(self.score) , True, (255,255,255),0)
-        self.screen.blit(text_score, (700, 100))
+        #text_score = font.render("Score : " + str(self.score) , True, (255,255,255),0)
+        text_score1 = font.render("Generation " + str(self.generation), True, (255,255,255),0)
+        self.screen.blit(text_score1, (700, 100))
+        text_score2 = font.render("Number  " + str(self.AInum), True, (255,255,255),0)
+        self.screen.blit(text_score2, (700, 150))
         text_line = font.render("Line : " + str(self.line) , True, (255,255,255),0)
         self.screen.blit(text_line, (700, 200))
         for i in range(1, numpy.size(self.message)):
             text_message = font.render(str(self.message[i]) , True, (190,20,100),0)
             self.screen.blit(text_message, (700, 400 + 50*i))
         font = pygame.font.Font(None,50)
-        text_score = font.render("Score : " + str(self.score2) , True, (255,255,255),0)
-        self.screen.blit(text_score, (900+700, 100))
+        #text_score = font.render("Score : " + str(self.score2) , True, (255,255,255),0)
+        text_score1 = font.render("Generation " + str(self.generation), True, (255,255,255),0)
+        self.screen.blit(text_score1, (900+700, 100))
+        text_score2 = font.render("Number  " + str(self.AInum2), True, (255,255,255),0)
+        self.screen.blit(text_score2, (900+700, 150))
         text_line = font.render("Line : " + str(self.line2) , True, (255,255,255),0)
         self.screen.blit(text_line, (900+700, 200))
         for i in range(1, numpy.size(self.message2)):
@@ -1314,10 +1323,10 @@ class Battle(Neural_Network):
         clock = pygame.time.Clock()
         time = 1000
         self.count = 0
-        self.weights = p1
-        self.biases = p2
-        self.weights2 = p1
-        self.biases2 = p2
+        self.weights = p1[0]
+        self.biases = p1[1]
+        self.weights2 = p2[0]
+        self.biases2 = p2[1]
 
         while self.game_over == False and self.game_over2 == False:
             #if self.line >= 40:
@@ -1393,7 +1402,7 @@ class Battle(Neural_Network):
                     pygame.quit()
                     sys.exit()
             
-            clock.tick(time)
+            clock.tick(120)
         if self.game_over:
             winner = 2
         else:
